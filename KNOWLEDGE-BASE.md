@@ -76,7 +76,7 @@ Tools/
 
 | Spike | State |
 |---|---|
-| 1. Accessibility plus window title observation | **Partial.** Application switching, idle detection, the event pipeline and the fold are all proven on a real machine. Title reading is written but unverified: it needs the permission granted. Revocation handling is written and untested. |
+| 1. Accessibility plus window title observation | **Proven, except revocation.** Application switching, idle detection, window title reading, the event pipeline and the fold all verified on a real machine with the permission granted. Revocation handling is written and still untested. |
 | 2. Native messaging, extension to sandboxed container app | **Not started.** Much lower risk than the plan assumed. Quiet already does exactly this, in the same direction, see section 6. |
 | 3. Mac App Store review with no network entitlement | **Blocked** on the $99 membership. Not a code blocker: dropping an entitlement is a one line change at the end. Build as if it will pass. |
 
@@ -171,6 +171,29 @@ said nothing about either.
 - **The permission dialog records itself.** `universalAccessAuthWarn` is the TCC prompt
   process and it shows up as a focus event. System permission dialogs need excluding, and
   the exclusion list is a shipping feature anyway.
+- **Window titles carry volatile noise that will shred the timeline.** The first real
+  title captured was:
+
+  ```
+  ... | LinkedIn - High memory usage - 1.2 GB - Google Chrome - zain
+  ```
+
+  Chrome appends a live memory reading and the profile name to its window title. That
+  figure changes on its own schedule, with no user action behind it, and every change looks
+  to the capture engine like a new window and therefore a new block. Left alone this would
+  split a single hour of browsing into dozens of fragments and make the day view unusable.
+
+  Titles need normalising before they reach the event log: strip the trailing application
+  name and profile, strip browser chrome such as memory warnings and unread counts, and
+  collapse whitespace. This belongs in `AmbitCore` as a pure function so it is testable and
+  so the raw title can still be kept alongside the cleaned one. It is also an argument for
+  landing spike 2 early, because a URL from the Safari extension is a far more stable
+  identity than a title string.
+
+  Worth noting what else that line demonstrates: a single window title exposed a named
+  company and what the user was reading about it. That is precisely the payload Timing,
+  Rize and RescueTime upload, and the reason the no network entitlement is the product.
+
 - **Idle threshold.** Currently 60s in the spike, 120s default in `IdleMonitor`. The plan
   says test this on real data before committing.
 - **Prompt on return, or silently mark idle?** Unresolved. Test during S1.
