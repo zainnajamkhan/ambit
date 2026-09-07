@@ -37,10 +37,10 @@ public struct ExclusionRule: Codable, Equatable, Sendable {
             return target.applicationName.compare(name, options: .caseInsensitive) == .orderedSame
         case .titleContains(let fragment):
             guard !fragment.isEmpty else { return false }
-            // Both titles are checked. Cleaning strips noise, and a rule the user wrote
-            // against what they saw in a title bar must still work if the cleaner happened
-            // to remove that part.
-            return [target.windowTitle, target.rawWindowTitle]
+            // Both titles are checked, and the URL. Cleaning strips noise, and a rule the
+            // user wrote against what they saw in a title bar must still work if the
+            // cleaner happened to remove exactly that part.
+            return [target.windowTitle, target.rawWindowTitle, target.url]
                 .compactMap { $0 }
                 .contains { $0.range(of: fragment, options: .caseInsensitive) != nil }
         }
@@ -71,7 +71,8 @@ public struct ExclusionPolicy: Codable, Equatable, Sendable {
         bundleIdentifier: "com.zainnajamkhan.ambit.excluded",
         applicationName: "Excluded",
         windowTitle: nil,
-        rawWindowTitle: nil
+        rawWindowTitle: nil,
+        url: nil
     )
 
     /// The exclusions that are never the user's job to think of.

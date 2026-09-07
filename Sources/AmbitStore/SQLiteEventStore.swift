@@ -81,6 +81,13 @@ public final class SQLiteEventStore: EventStore {
                 table.column("rawWindowTitle", .text)
             }
         }
+        // Added before anything writes a URL. A migration is cheapest while the only
+        // databases in existence are on this machine.
+        migrator.registerMigration("addURL") { db in
+            try db.alter(table: "event") { table in
+                table.add(column: "url", .text)
+            }
+        }
         return migrator
     }
 
@@ -164,6 +171,7 @@ private struct EventRecord: Codable, FetchableRecord, PersistableRecord {
     var applicationName: String?
     var windowTitle: String?
     var rawWindowTitle: String?
+    var url: String?
 
     init(_ recorded: RecordedEvent) {
         id = nil
@@ -176,6 +184,7 @@ private struct EventRecord: Codable, FetchableRecord, PersistableRecord {
             applicationName = target.applicationName
             windowTitle = target.windowTitle
             rawWindowTitle = target.rawWindowTitle
+            url = target.url
         case .idleBegan:
             kind = Kind.idleBegan
         case .idleEnded:
@@ -208,7 +217,8 @@ private struct EventRecord: Codable, FetchableRecord, PersistableRecord {
                 bundleIdentifier: bundleIdentifier,
                 applicationName: applicationName,
                 windowTitle: windowTitle,
-                rawWindowTitle: rawWindowTitle
+                rawWindowTitle: rawWindowTitle,
+                url: url
             )
             return RecordedEvent(at: date, event: .focused(target))
         case Kind.idleBegan: return RecordedEvent(at: date, event: .idleBegan)

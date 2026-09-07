@@ -25,16 +25,25 @@ public struct FocusTarget: Codable, Equatable, Sendable {
     /// replayed over stored history later. Never used for comparison, see ``==``.
     public let rawWindowTitle: String?
 
+    /// The address of the active tab, when the browser extension is reporting one.
+    ///
+    /// Nothing populates this yet. It is here early because a URL is a far steadier identity
+    /// than a page title, and because rules written against a host today should keep working
+    /// when the extension lands rather than needing a migration then.
+    public let url: String?
+
     public init(
         bundleIdentifier: String,
         applicationName: String,
         windowTitle: String? = nil,
-        rawWindowTitle: String? = nil
+        rawWindowTitle: String? = nil,
+        url: String? = nil
     ) {
         self.bundleIdentifier = bundleIdentifier
         self.applicationName = applicationName
         self.windowTitle = windowTitle
         self.rawWindowTitle = rawWindowTitle
+        self.url = url
     }
 
     /// Equality deliberately ignores ``rawWindowTitle``.
@@ -52,6 +61,7 @@ public struct FocusTarget: Codable, Equatable, Sendable {
         lhs.bundleIdentifier == rhs.bundleIdentifier
             && lhs.applicationName == rhs.applicationName
             && lhs.windowTitle == rhs.windowTitle
+            && lhs.url == rhs.url
     }
 }
 
