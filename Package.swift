@@ -9,6 +9,7 @@ let package = Package(
         .library(name: "AmbitCore", targets: ["AmbitCore"]),
         .library(name: "AmbitStore", targets: ["AmbitStore"]),
         .library(name: "AmbitCapture", targets: ["AmbitCapture"]),
+        .executable(name: "Ambit", targets: ["AmbitApp"]),
         .executable(name: "ambit-spike-ax", targets: ["ambit-spike-ax"]),
     ],
     dependencies: [
@@ -40,6 +41,13 @@ let package = Package(
         .target(
             name: "AmbitCapture",
             dependencies: ["AmbitCore"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+
+        // The app itself: menu bar, day timeline, week summary.
+        .executableTarget(
+            name: "AmbitApp",
+            dependencies: ["AmbitCore", "AmbitCapture", "AmbitStore"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
 
