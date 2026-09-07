@@ -105,6 +105,14 @@ struct AmbitApp: App {
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 560, height: 620)
+
+        // The standard place, reachable with the standard shortcut. Changing anything here
+        // rewrites no history: the timeline is folded again from the same events.
+        // Qualified: Ambit has its own `Settings` model type, and an unqualified name here
+        // resolves to that rather than to the scene.
+        SwiftUI.Settings {
+            SettingsView(store: AmbitServices.shared.settings)
+        }
     }
 }
 

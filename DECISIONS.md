@@ -50,22 +50,18 @@ symbol, which is allowed.
 
 Ranked by what stands between here and something you could run for a fortnight.
 
-1. **A settings window. This is the biggest gap.** Projects, rules and exclusions all work
-   and are all tested, and there is no way to create any of them except by editing
-   `~/Library/Application Support/Ambit/settings.json` by hand. The engine is done; the
-   surface is missing.
-2. **Timeline editing**, per the open question above.
-3. **Onboarding**, including the Accessibility permission walkthrough. The plan calls this
+1. **Timeline editing**, per the open question above. Now the largest gap.
+2. **Onboarding**, including the Accessibility permission walkthrough. The plan calls this
    out as where the category loses users, and the menu bar currently shows a bare warning
    with two buttons.
-4. **The Safari extension** (S4). Lower risk than the plan assumed; Quiet already proves the
+3. **The Safari extension** (S4). Lower risk than the plan assumed; Quiet already proves the
    pipeline. `FocusTarget.url` and the URL rule types are in place waiting for it.
-5. **Sandboxing and the App Group move.** The store is at
+4. **Sandboxing and the App Group move.** The store is at
    `~/Library/Application Support/Ambit/`; sandboxed it has to move into the App Group
    container so the extension's handler can write to the same log.
-6. **Encryption at rest** (S7), key in the Keychain.
-7. **Launch at login** via `SMAppService`.
-8. **App icon, store assets, comparison pages.**
+5. **Encryption at rest** (S7), key in the Keychain.
+6. **Launch at login** via `SMAppService`.
+7. **App icon, store assets, comparison pages.**
 
 ---
 
@@ -78,6 +74,10 @@ no window titles. Open the menu bar item and it will say so, with a button.
 ```
 open ~/Desktop/Non-Work/ambit/build/Ambit.app
 ```
+
+There is a **placeholder project** in your settings called "Ambit itself", with one rule, put
+there so the interface has something in it when you first open it. Delete it in Settings and
+make your own. Settings is reachable from the menu bar item, since there is no Dock icon.
 
 Then look at it and tell me what is wrong with it. I built the whole interface without ever
 seeing it render, because your screen was locked all night. Every layout decision in there

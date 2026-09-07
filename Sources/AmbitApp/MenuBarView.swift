@@ -156,6 +156,16 @@ struct MenuBarView: View {
                 NSApp.activate(ignoringOtherApps: true)
             }
 
+            MenuRow(title: "Settings…", symbol: "gearshape") {
+                // With no Dock icon and no application menu, this is the only route in.
+                if #available(macOS 14, *) {
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                } else {
+                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                }
+                NSApp.activate(ignoringOtherApps: true)
+            }
+
             MenuRow(title: "Quit Ambit", symbol: "power") {
                 controller.stop()
                 NSApp.terminate(nil)

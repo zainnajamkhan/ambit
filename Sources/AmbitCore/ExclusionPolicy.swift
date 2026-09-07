@@ -59,7 +59,7 @@ public struct ExclusionRule: Codable, Equatable, Sendable {
 /// accounted for while telling the database nothing whatsoever about what they were doing.
 public struct ExclusionPolicy: Codable, Equatable, Sendable {
 
-    public let rules: [ExclusionRule]
+    public var rules: [ExclusionRule]
 
     public init(rules: [ExclusionRule] = []) {
         self.rules = rules

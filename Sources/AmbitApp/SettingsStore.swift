@@ -43,15 +43,32 @@ final class SettingsStore: ObservableObject {
         let resolved = url ?? Self.defaultURL
         self.url = resolved
 
-        if let data = try? Data(contentsOf: resolved),
-           let decoded = try? JSONDecoder().decode(Settings.self, from: data) {
-            settings = decoded
+        // A missing file is an ordinary first run. A file that exists and will not parse is
+        // something else entirely, and it must not be indistinguishable from the first case:
+        // to the user, silently starting empty looks exactly like every project they ever
+        // made being deleted. The broken file is kept rather than overwritten, so whatever
+        // was in it can still be recovered.
+        if let data = try? Data(contentsOf: resolved) {
+            do {
+                settings = try JSONDecoder().decode(Settings.self, from: data)
+                NSLog("Ambit: settings loaded from \(resolved.path)")
+            } catch {
+                settings = Settings()
+                loadFailure = error.localizedDescription
+                let salvage = resolved.appendingPathExtension("broken")
+                try? FileManager.default.removeItem(at: salvage)
+                try? FileManager.default.copyItem(at: resolved, to: salvage)
+                NSLog("Ambit: settings could not be read (\(error)). A copy was kept at \(salvage.path)")
+            }
         } else {
-            // A missing or unreadable settings file is a first run, not an error worth
-            // stopping for. Capture matters more than configuration.
             settings = Settings()
+            NSLog("Ambit: no settings file yet, starting fresh")
         }
     }
+
+    /// Set when a settings file existed but could not be understood, so the interface can
+    /// say so instead of quietly presenting an empty configuration.
+    private(set) var loadFailure: String?
 
     static var defaultURL: URL {
         let support = (try? FileManager.default.url(

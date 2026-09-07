@@ -11,15 +11,15 @@ import Foundation
 /// Something the user bills for, or simply wants to see separately.
 public struct Project: Codable, Equatable, Sendable, Identifiable {
     public let id: UUID
-    public let name: String
+    public var name: String
 
     /// A name from a fixed palette, not a colour value. `AmbitCore` has no opinion about
     /// how anything looks and must not import AppKit; the interface maps this to something
     /// that works in both light and dark appearance.
-    public let colorName: String
+    public var colorName: String
 
     /// Whether time on this project is billable unless a rule says otherwise.
-    public let isBillable: Bool
+    public var isBillable: Bool
 
     public init(
         id: UUID = UUID(),

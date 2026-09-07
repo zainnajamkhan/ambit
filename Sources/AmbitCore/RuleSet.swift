@@ -51,12 +51,12 @@ public enum RuleMatch: Codable, Equatable, Sendable {
 /// One line of "when this, call it that".
 public struct Rule: Codable, Equatable, Sendable, Identifiable {
     public let id: UUID
-    public let projectID: UUID
-    public let match: RuleMatch
+    public var projectID: UUID
+    public var match: RuleMatch
 
     /// Overrides the project's own billable setting when present. The case this exists for
     /// is a single client whose work is mostly billable but whose internal meetings are not.
-    public let isBillable: Bool?
+    public var isBillable: Bool?
 
     public init(id: UUID = UUID(), projectID: UUID, match: RuleMatch, isBillable: Bool? = nil) {
         self.id = id
@@ -87,8 +87,8 @@ public struct Classification: Equatable, Sendable {
 /// be reclassified by replaying it. A rule written in March genuinely does fix January.
 public struct RuleSet: Codable, Equatable, Sendable {
 
-    public let projects: [Project]
-    public let rules: [Rule]
+    public var projects: [Project]
+    public var rules: [Rule]
 
     public init(projects: [Project] = [], rules: [Rule] = []) {
         self.projects = projects
