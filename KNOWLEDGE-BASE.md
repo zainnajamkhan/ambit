@@ -3,7 +3,9 @@
 Everything needed to pick this project back up cold, plus the platform facts that were
 expensive to learn.
 
-Last updated 8 September 2026. State: **S1 begun. The log persists. Spike 1 proven except revocation.**
+Last updated 8 September 2026. State: **S1, S2, S3 and S5 built. The app runs, records and
+shows a day and a week. No settings window yet, so projects and rules can only be created
+by editing JSON by hand. Product decisions waiting in `DECISIONS.md`.**
 
 Companion to `../quiet/KNOWLEDGE-BASE.md`, which holds the sandbox, App Group, Safari
 extension, StoreKit and app lifecycle facts. Those are not repeated here. Read both.
@@ -59,6 +61,12 @@ Sources/
   AmbitCore/               PURE. No frameworks, no I/O, no clock. Swift 6 language mode.
     ActivityEvent.swift    the append only event model
     Timeline.swift         the fold from events to blocks
+    WindowTitleNormalizer  strips titles that change on their own
+    ExclusionPolicy.swift  what must never be written down
+    Project.swift          projects and the closed colour palette
+    RuleSet.swift          ordered rules, first match wins
+    Summary.swift          totals per project, and the unsorted list
+    Export.swift           CSV and JSON, RFC 4180 escaped
   AmbitStore/              SQLite through GRDB. Append and read only. Swift 6 mode.
     EventStore.swift       the protocol, so nothing above knows about SQLite
     SQLiteEventStore.swift flat columns, not a serialised blob, so the file stays readable
@@ -66,6 +74,7 @@ Sources/
     AccessibilityAuthorization.swift
     FocusWatcher.swift     NSWorkspace + AXObserver
     IdleMonitor.swift      CGEventSource
+  AmbitApp/                SwiftUI. Menu bar, day timeline, week summary, export.
   ambit-spike-ax/          spike 1 runner
 Tests/                     60 tests across the core and the store
 Tools/
@@ -186,6 +195,31 @@ said nothing about the first two, and fifty six said nothing about the next two.
 of them was found by running the thing and reading the output.
 
 ---
+
+## 7a. Bugs the interface found by being launched
+
+The pattern held all the way through. Every one of these passed its tests first.
+
+6. **The app recorded nothing at all.** Capture was started from the day view's `.task`, and
+   Ambit is a menu bar app with no Dock icon whose window may never be opened. It sat at
+   zero per cent processor doing nothing until someone happened to open a window. Long lived
+   objects now live outside the view tree and start from the application delegate, which
+   also means quitting from anywhere closes the open block rather than only the menu item
+   doing so.
+7. **Health was only ever written on failure.** After the user granted Accessibility and
+   titles started flowing, the state stayed on "waiting for permission" for the rest of the
+   run, so the interface would have gone on asking for something it already had.
+8. **The lock monitor assumed the user was present at startup.** The notifications only
+   announce changes. Ambit is meant to launch at login and at login the screen is often
+   still locked, so every morning began by recording the lock screen as work. It now asks
+   `CGSessionCopyCurrentDictionary` where it actually is before listening for changes.
+
+## 7b. The app has its own TCC identity
+
+`com.zainnajamkhan.ambit` and `com.zainnajamkhan.ambit.spike` are different applications as
+far as the permission system is concerned. Granting Accessibility to one does nothing for
+the other. Expect to grant it again for each new bundle identifier, including whatever the
+final shipping one turns out to be.
 
 ## 8. Open questions and findings to act on
 
