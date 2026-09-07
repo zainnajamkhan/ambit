@@ -156,6 +156,12 @@ Both were invisible to the tests and would have shipped.
    has not changed, and the initial state usually equals the property's default. The result
    was that "I am running but I cannot see window titles", the single most important thing
    the app has to say on a fresh install, was never delivered to the interface.
+3. **Every application switch produced a throwaway titleless block.** `attach` emitted on
+   the application name alone *before* trying to read the title, so each switch wrote a
+   junk block a few milliseconds ahead of the real one. The reasoning behind that emit was
+   sound (an install with no Accessibility should still record something) but the placement
+   was not: it now fires only when a title is genuinely unavailable. A short session went
+   from 8 events and 5 blocks to 6 events and 3 blocks.
 
 This is the argument for section 1 of the skill in one paragraph. Fourteen passing tests
 said nothing about either.
@@ -171,31 +177,40 @@ said nothing about either.
 - **The permission dialog records itself.** `universalAccessAuthWarn` is the TCC prompt
   process and it shows up as a focus event. System permission dialogs need excluding, and
   the exclusion list is a shipping feature anyway.
-- **Window titles carry volatile noise that will shred the timeline.** The first real
-  title captured was:
+- **Window titles carry volatile noise. Handled, and it keeps turning up.** Three
+  self-changing titles were found within ten minutes of running the capture engine on a
+  real machine:
 
-  ```
-  ... | LinkedIn - High memory usage - 1.2 GB - Google Chrome - zain
-  ```
+  | Application | Noise it writes into its own title |
+  |---|---|
+  | Chrome | a live memory figure, an unread count, the profile name |
+  | Terminal | the window's dimensions, so a resize looks like new work |
+  | VS Code and friends | an unsaved-changes dot that toggles on every keystroke |
 
-  Chrome appends a live memory reading and the profile name to its window title. That
-  figure changes on its own schedule, with no user action behind it, and every change looks
-  to the capture engine like a new window and therefore a new block. Left alone this would
-  split a single hour of browsing into dozens of fragments and make the day view unusable.
+  `WindowTitleNormalizer` in `AmbitCore` strips these. It is a pure function, so the rules
+  are testable against real strings and can be improved later.
 
-  Titles need normalising before they reach the event log: strip the trailing application
-  name and profile, strip browser chrome such as memory warnings and unread counts, and
-  collapse whitespace. This belongs in `AmbitCore` as a pure function so it is testable and
-  so the raw title can still be kept alongside the cleaned one. It is also an argument for
-  landing spike 2 early, because a URL from the Safari extension is a far more stable
-  identity than a title string.
+  **Both titles are stored.** `FocusTarget` carries the cleaned title and the raw one.
+  `==` is written by hand and **deliberately ignores the raw title**, which is the entire
+  mechanism preventing noise from splitting blocks. Deleting that operator in favour of the
+  synthesised one silently restores the bug, so it is commented accordingly.
 
-  Worth noting what else that line demonstrates: a single window title exposed a named
-  company and what the user was reading about it. That is precisely the payload Timing,
-  Rize and RescueTime upload, and the reason the no network entitlement is the product.
+  Cleaning happens *before* the comparison that decides whether to record an event, so the
+  store never fills with noise. The cost is that observations today's rules consider pure
+  noise are never written, so a future improvement to the rules can only be replayed over
+  what was kept. That is the right trade: the discarded rows are the ones with no
+  information in them.
+
+  Expect to keep adding rules here. Every application invents its own noise.
 
 - **Idle threshold.** Currently 60s in the spike, 120s default in `IdleMonitor`. The plan
   says test this on real data before committing.
+- **Idle ends up to one poll interval late.** `IdleMonitor` polls every five seconds, so a
+  block boundary can be that far out. Harmless for billing at hour granularity, worth
+  revisiting if the day view ever shows seconds.
+- **Focus changes during idle keep the time attributed to the older application.** Correct
+  when an application steals focus while the user is away. In normal use a switch requires
+  input, which ends idle on the next poll, so this is rarely visible.
 - **Prompt on return, or silently mark idle?** Unresolved. Test during S1.
 - **The store.** Not written. Plan calls for SQLite through GRDB, since this is a time
   series with many small rows and a lot of range queries.

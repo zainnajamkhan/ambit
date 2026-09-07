@@ -127,12 +127,15 @@ public final class FocusWatcher: NSObject {
         observedProcess = pid
         observedApplication = AXUIElementCreateApplication(pid)
 
-        // Emit immediately on the application name alone. If Accessibility is missing this
-        // is all Ambit will ever know, and a tracker that records "Xcode, 90 minutes" is
-        // still worth more than one that records nothing while it waits for a permission.
-        emit(title: nil, for: app)
-
+        // Emit on the application name alone only when the title is genuinely unavailable.
+        //
+        // This used to fire unconditionally, on the reasoning that a tracker recording
+        // "Xcode, 90 minutes" beats one recording nothing. That reasoning is right, but
+        // doing it before trying to read the title meant every single application switch
+        // produced a throwaway titleless block a few milliseconds before the real one.
+        // Running the spike showed the timeline littered with them.
         guard AccessibilityAuthorization.isTrusted else {
+            emit(title: nil, for: app)
             health = hasEverBeenTrusted ? .permissionRevoked : .awaitingPermission
             return
         }
@@ -141,6 +144,8 @@ public final class FocusWatcher: NSObject {
         let result = AXObserverCreate(pid, axNotificationReceived, &created)
         guard result == .success, let created, let application = observedApplication else {
             note(error: result)
+            // Observation failed, so no title is coming. Record the application at least.
+            emit(title: nil, for: app)
             return
         }
         observer = created
@@ -258,11 +263,20 @@ public final class FocusWatcher: NSObject {
 
     // MARK: - Emitting
 
+    /// Builds a target and reports it, unless nothing the user would notice has changed.
+    ///
+    /// The title is cleaned *before* it is compared, and that ordering is the whole defence
+    /// against noisy titles. Chrome's memory figure moves every few seconds; comparing the
+    /// raw string would emit an event every time it did. The raw string is still carried on
+    /// the target so the cleaning rules can be improved and replayed later. It simply takes
+    /// no part in deciding whether anything happened.
     private func emit(title: String?, for app: NSRunningApplication) {
+        let name = app.localizedName ?? "Unknown"
         let target = FocusTarget(
             bundleIdentifier: app.bundleIdentifier ?? "pid.\(app.processIdentifier)",
-            applicationName: app.localizedName ?? "Unknown",
-            windowTitle: title
+            applicationName: name,
+            windowTitle: WindowTitleNormalizer.normalize(title, applicationName: name),
+            rawWindowTitle: title
         )
         guard target != lastEmitted else { return }
         lastEmitted = target

@@ -119,6 +119,11 @@ let watcher = FocusWatcher()
 watcher.onFocus = { target in
     recorded.append(.focused(target))
     log("focus    \(describe(target))")
+    // Show the original whenever cleaning changed it, so the rules can be judged against
+    // real titles rather than against the ones I imagined while writing them.
+    if let raw = target.rawWindowTitle, raw != target.windowTitle {
+        log("  raw    \"\(raw)\"")
+    }
 }
 
 watcher.onHealthChange = { health in

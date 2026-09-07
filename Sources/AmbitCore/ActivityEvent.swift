@@ -17,12 +17,41 @@ import Foundation
 public struct FocusTarget: Codable, Equatable, Sendable {
     public let bundleIdentifier: String
     public let applicationName: String
+
+    /// The cleaned title. Display, comparison and block boundaries all use this one.
     public let windowTitle: String?
 
-    public init(bundleIdentifier: String, applicationName: String, windowTitle: String? = nil) {
+    /// Exactly what the system reported, kept so the cleaning rules can be improved and
+    /// replayed over stored history later. Never used for comparison, see ``==``.
+    public let rawWindowTitle: String?
+
+    public init(
+        bundleIdentifier: String,
+        applicationName: String,
+        windowTitle: String? = nil,
+        rawWindowTitle: String? = nil
+    ) {
         self.bundleIdentifier = bundleIdentifier
         self.applicationName = applicationName
         self.windowTitle = windowTitle
+        self.rawWindowTitle = rawWindowTitle
+    }
+
+    /// Equality deliberately ignores ``rawWindowTitle``.
+    ///
+    /// This is written by hand for exactly one reason, and deleting it in favour of the
+    /// synthesised version would quietly reintroduce the bug it exists to prevent. Two
+    /// observations of the same page differ in their raw titles constantly, because Chrome
+    /// writes a live memory figure into its window title and editors toggle an unsaved
+    /// marker on every keystroke. If equality noticed any of that, every tick would look
+    /// like a new window and an hour of work would be recorded as hundreds of fragments.
+    ///
+    /// What the user was doing is the cleaned title. The raw string is an archive, not an
+    /// identity.
+    public static func == (lhs: FocusTarget, rhs: FocusTarget) -> Bool {
+        lhs.bundleIdentifier == rhs.bundleIdentifier
+            && lhs.applicationName == rhs.applicationName
+            && lhs.windowTitle == rhs.windowTitle
     }
 }
 
