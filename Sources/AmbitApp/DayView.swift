@@ -20,7 +20,6 @@ struct DayView: View {
             Divider()
             content
         }
-        .frame(minWidth: 460, idealWidth: 560, minHeight: 420, idealHeight: 620)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 

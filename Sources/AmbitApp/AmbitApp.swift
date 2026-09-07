@@ -93,7 +93,7 @@ struct AmbitApp: App {
         .menuBarExtraStyle(.window)
 
         Window("Ambit", id: AmbitWindow.main) {
-            DayView(controller: controller)
+            MainView(controller: controller)
                 .alert("Ambit could not open its database", isPresented: $showingStoreFailure) {
                     Button("Continue") { showingStoreFailure = false }
                 } message: {

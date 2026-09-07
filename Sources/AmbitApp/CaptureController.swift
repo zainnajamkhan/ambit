@@ -158,14 +158,36 @@ final class CaptureController: ObservableObject {
         Summary.classify(blocks, with: settingsStore.settings.rules)
     }
 
-    func weekSummary() -> PeriodSummary {
+    /// The selected day's week, folded and classified. Used by the week view and by export.
+    func weekClassifiedBlocks() -> [ClassifiedBlock] {
+        Summary.classify(weekBlocks(), with: settingsStore.settings.rules)
+    }
+
+    private func weekBlocks() -> [Block] {
         let calendar = Calendar.current
         guard let week = calendar.dateInterval(of: .weekOfYear, for: selectedDay) else {
-            return summary
+            return blocks
         }
         let events = (try? store.events(from: week.start, to: week.end)) ?? []
-        let blocks = Timeline.blocks(from: events, upTo: min(week.end, Date()))
-        return Summary.summarise(blocks, with: settingsStore.settings.rules)
+        return Timeline.blocks(from: events, upTo: min(week.end, Date()))
+    }
+
+    /// A filename that says what is in the file and sorts correctly in a folder.
+    func exportFilename(forWeek: Bool, extension ext: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+
+        let calendar = Calendar.current
+        if forWeek, let week = calendar.dateInterval(of: .weekOfYear, for: selectedDay) {
+            let end = calendar.date(byAdding: .day, value: -1, to: week.end) ?? week.end
+            return "Ambit \(formatter.string(from: week.start)) to \(formatter.string(from: end)).\(ext)"
+        }
+        return "Ambit \(formatter.string(from: selectedDay)).\(ext)"
+    }
+
+    func weekSummary() -> PeriodSummary {
+        Summary.summarise(weekBlocks(), with: settingsStore.settings.rules)
     }
 
     // MARK: - Plumbing
