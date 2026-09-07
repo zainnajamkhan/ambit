@@ -7,14 +7,28 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "AmbitCore", targets: ["AmbitCore"]),
+        .library(name: "AmbitStore", targets: ["AmbitStore"]),
         .library(name: "AmbitCapture", targets: ["AmbitCapture"]),
         .executable(name: "ambit-spike-ax", targets: ["ambit-spike-ax"]),
+    ],
+    dependencies: [
+        // SQLite, because this is a time series of many small rows with a lot of range
+        // queries over it. A pure Swift wrapper with no networking in it, which matters
+        // for an app whose whole claim is that it cannot reach the outside world.
+        .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
     ],
     targets: [
         // Pure logic. No system frameworks, no I/O, fully testable.
         // Strict concurrency is on here because everything is a value type.
         .target(
             name: "AmbitCore",
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+
+        // Persistence. Append only: the log is written and read, never edited.
+        .target(
+            name: "AmbitStore",
+            dependencies: ["AmbitCore", .product(name: "GRDB", package: "GRDB.swift")],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
 
@@ -38,6 +52,18 @@ let package = Package(
         .testTarget(
             name: "AmbitCoreTests",
             dependencies: ["AmbitCore"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+
+        // GRDB is a direct dependency here so the tests can write a deliberately
+        // malformed row and prove the store degrades instead of refusing to open.
+        .testTarget(
+            name: "AmbitStoreTests",
+            dependencies: [
+                "AmbitStore",
+                "AmbitCore",
+                .product(name: "GRDB", package: "GRDB.swift"),
+            ],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
     ]
