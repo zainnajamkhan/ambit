@@ -3,7 +3,7 @@
 Everything needed to pick this project back up cold, plus the platform facts that were
 expensive to learn.
 
-Last updated 8 September 2026. State: **S0 in progress. Spike 1 partially proven.**
+Last updated 8 September 2026. State: **S0 in progress. Spike 1 proven except revocation.**
 
 Companion to `../quiet/KNOWLEDGE-BASE.md`, which holds the sandbox, App Group, Safari
 extension, StoreKit and app lifecycle facts. Those are not repeated here. Read both.
