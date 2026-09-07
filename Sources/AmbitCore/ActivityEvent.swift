@@ -71,6 +71,17 @@ public enum ActivityEvent: Codable, Equatable, Sendable {
     /// Input resumed after an idle stretch.
     case idleEnded
 
+    /// The screen locked, or the display slept.
+    ///
+    /// Distinct from idle rather than folded into it, for two reasons. It is certain
+    /// instead of inferred: idle is a guess from the absence of typing, and someone reading
+    /// a long document is idle without being away. And it lets the interface avoid asking
+    /// "what was that gap?" about a nine hour stretch that was obviously the night.
+    case screenLocked
+
+    /// The screen unlocked or the display woke.
+    case screenUnlocked
+
     /// The user switched capture off, or a named Focus did it for them.
     case paused
 

@@ -221,11 +221,15 @@ struct SQLiteEventStoreTests {
 
         // Something a later version of Ambit might write. An older build has to show the
         // history it does understand rather than refuse to open the file at all.
+        //
+        // Deliberately a name no real event will ever take. This test first used
+        // "screenLocked", which stopped being unknown the day screen lock was implemented,
+        // and the test failed for the most encouraging possible reason.
         let raw = try DatabaseQueue(path: url.path)
         try raw.write { db in
             try db.execute(
                 sql: "INSERT INTO event (at, kind) VALUES (?, ?)",
-                arguments: [t(10).timeIntervalSince1970, "screenLocked"]
+                arguments: [t(10).timeIntervalSince1970, "aKindFromSomeLaterVersion"]
             )
         }
 

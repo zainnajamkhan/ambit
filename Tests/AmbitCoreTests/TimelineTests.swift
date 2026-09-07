@@ -144,6 +144,100 @@ struct TimelineTests {
         #expect(blocks[0].end == t(120))
     }
 
+    // MARK: - Being away, in its various overlapping forms
+
+    @Test("locking the screen ends work and unlocking resumes it")
+    func screenLock() {
+        let blocks = Timeline.blocks(
+            from: log([(0, .focused(xcode())), (60, .screenLocked), (300, .screenUnlocked)]),
+            upTo: t(360)
+        )
+        #expect(blocks.map(\.state) == [.active, .locked, .active])
+        #expect(blocks[1].duration == 240)
+    }
+
+    @Test("locking while already idle promotes the block from idle to locked")
+    func lockWhileIdle() {
+        // The ordinary sequence for walking away: you stop typing, the idle threshold
+        // passes, then the screen locks itself. A single state machine had to guess which
+        // of these outranked the other. Tracked separately there is nothing to guess.
+        let blocks = Timeline.blocks(
+            from: log([
+                (0, .focused(xcode())),
+                (60, .idleBegan),
+                (120, .screenLocked),
+                (300, .screenUnlocked),
+                (360, .idleEnded),
+            ]),
+            upTo: t(400)
+        )
+        #expect(blocks.map(\.state) == [.active, .idle, .locked, .idle, .active])
+        #expect(blocks[2].duration == 180, "the locked stretch")
+        #expect(blocks[3].duration == 60, "still idle between unlocking and touching a key")
+    }
+
+    @Test("pausing outranks everything, so locking during a pause changes nothing")
+    func pauseOutranksLock() {
+        let blocks = Timeline.blocks(
+            from: log([
+                (0, .focused(xcode())),
+                (60, .paused),
+                (120, .screenLocked),
+                (300, .screenUnlocked),
+                (360, .resumed),
+            ]),
+            upTo: t(400)
+        )
+        #expect(blocks.map(\.state) == [.active, .paused, .active])
+        #expect(blocks[1].duration == 300, "one unbroken paused block, not three")
+    }
+
+    @Test("a night is one locked block, not a night of fragments")
+    func overnight() {
+        let blocks = Timeline.blocks(
+            from: log([
+                (0, .focused(xcode())),   // working
+                (3_600, .idleBegan),      // an hour later, stopped typing
+                (3_660, .screenLocked),   // a minute after that, the screen locked itself
+                (57_600, .screenUnlocked),// back the next morning
+                (57_610, .idleEnded),
+            ]),
+            upTo: t(61_200)
+        )
+        let locked = blocks.filter { $0.state == .locked }
+        #expect(locked.count == 1, "one block for the night, whatever else happened in it")
+        #expect(locked[0].duration == 57_600 - 3_660)
+
+        // And none of it counted as work, which is the point.
+        let worked = blocks.filter { $0.state == .active }.reduce(0) { $0 + $1.duration }
+        #expect(worked == 3_600 + (61_200 - 57_610))
+    }
+
+    @Test("a redundant unlock with nothing locked does not split a block")
+    func redundantUnlock() {
+        let blocks = Timeline.blocks(
+            from: log([(0, .focused(xcode())), (60, .screenUnlocked)]),
+            upTo: t(120)
+        )
+        #expect(blocks.count == 1)
+        #expect(blocks[0].duration == 120)
+    }
+
+    @Test("quitting while the screen is locked does not poison the next session")
+    func stopWhileLocked() {
+        let blocks = Timeline.blocks(
+            from: log([
+                (0, .focused(xcode())),
+                (60, .screenLocked),
+                (120, .stopped),
+                (600, .focused(safari())),
+            ]),
+            upTo: t(900)
+        )
+        #expect(blocks.map(\.state) == [.active, .locked, .active])
+        #expect(blocks[2].target == safari())
+    }
+
     @Test("quitting while idle does not swallow the next session's work")
     func stopWhileIdleResetsState() {
         // The log of two runs of the app end to end. The first quits while the user is

@@ -180,6 +180,10 @@ private struct EventRecord: Codable, FetchableRecord, PersistableRecord {
             kind = Kind.idleBegan
         case .idleEnded:
             kind = Kind.idleEnded
+        case .screenLocked:
+            kind = Kind.screenLocked
+        case .screenUnlocked:
+            kind = Kind.screenUnlocked
         case .paused:
             kind = Kind.paused
         case .resumed:
@@ -209,6 +213,8 @@ private struct EventRecord: Codable, FetchableRecord, PersistableRecord {
             return RecordedEvent(at: date, event: .focused(target))
         case Kind.idleBegan: return RecordedEvent(at: date, event: .idleBegan)
         case Kind.idleEnded: return RecordedEvent(at: date, event: .idleEnded)
+        case Kind.screenLocked: return RecordedEvent(at: date, event: .screenLocked)
+        case Kind.screenUnlocked: return RecordedEvent(at: date, event: .screenUnlocked)
         case Kind.paused: return RecordedEvent(at: date, event: .paused)
         case Kind.resumed: return RecordedEvent(at: date, event: .resumed)
         case Kind.stopped: return RecordedEvent(at: date, event: .stopped)
@@ -222,6 +228,8 @@ private struct EventRecord: Codable, FetchableRecord, PersistableRecord {
         static let focused = "focused"
         static let idleBegan = "idleBegan"
         static let idleEnded = "idleEnded"
+        static let screenLocked = "screenLocked"
+        static let screenUnlocked = "screenUnlocked"
         static let paused = "paused"
         static let resumed = "resumed"
         static let stopped = "stopped"

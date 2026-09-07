@@ -181,15 +181,24 @@ let permissionWatch = AccessibilityAuthorization.watch { trusted in
     watcher.reattach()
 }
 
+let screenLock = ScreenLockMonitor { isAway in
+    recorded.append(isAway ? .screenLocked : .screenUnlocked)
+    log(isAway ? "screen   locked" : "screen   unlocked")
+}
+
 let idle = IdleMonitor(threshold: 60) { isIdle in
     recorded.append(isIdle ? .idleBegan : .idleEnded)
     log(isIdle ? "idle     began" : "idle     ended")
 }
 
+// Order matters. Establishing whether the user is even present comes before recording
+// what is in front of them, otherwise a launch into a locked screen briefly records the
+// lock screen itself as work.
+screenLock.start()
 watcher.start()
 idle.start()
 
-log("watching. Switch apps, change window titles, walk away for 60s.")
+log("watching. Switch apps, change window titles, walk away for 60s, lock the screen.")
 log("then revoke Accessibility in System Settings and watch the health line.")
 log("Ctrl-C, or quit, to print the folded timeline.")
 
@@ -206,6 +215,7 @@ for signalNumber in [SIGINT, SIGTERM] {
         recorded.append(.stopped)
         watcher.stop()
         idle.stop()
+        screenLock.stop()
         permissionWatch.stop()
         dumpTimeline()
         // Draining the queue is not optional. The log writes are asynchronous and exit(0)

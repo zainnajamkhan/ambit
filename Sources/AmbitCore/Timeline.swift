@@ -9,10 +9,28 @@
 import Foundation
 
 /// Whether the user was working, away, or had switched capture off.
-public enum BlockState: String, Codable, Equatable, Sendable {
+///
+/// Ordered by how strongly each one overrides the others. If capture is paused it does not
+/// matter what else is true, and a locked screen is a more certain kind of absence than a
+/// keyboard that has gone quiet.
+public enum BlockState: String, Codable, Equatable, Sendable, Comparable {
     case active
     case idle
+    case locked
     case paused
+
+    private var precedence: Int {
+        switch self {
+        case .active: 0
+        case .idle: 1
+        case .locked: 2
+        case .paused: 3
+        }
+    }
+
+    public static func < (lhs: BlockState, rhs: BlockState) -> Bool {
+        lhs.precedence < rhs.precedence
+    }
 }
 
 /// A stretch of time during which nothing changed.
@@ -56,10 +74,30 @@ public enum Timeline {
         var segmentState: BlockState = .active
         var segmentTarget: FocusTarget?
 
-        // What is frontmost right now, which is not the same thing. A focus change while
-        // idle updates this without disturbing the idle block in progress: only the idle
-        // monitor gets to decide when idleness ends.
+        // What is frontmost right now, which is not the same thing as what the open
+        // segment is about. A focus change while the user is away updates this without
+        // disturbing the block in progress; it becomes the subject of the next active one.
         var currentTarget: FocusTarget?
+
+        // The reasons the user might not be working, tracked independently rather than as
+        // one state.
+        //
+        // They genuinely overlap: a screen can lock while already idle, capture can be
+        // paused and then the machine sleeps, and either can end in either order. An
+        // earlier version collapsed all of this into a single state and had to guess which
+        // event was allowed to overwrite which. It guessed wrong three separate times, and
+        // each wrong guess silently discarded real work. Deriving the state from flags
+        // instead makes the overlaps impossible to get wrong.
+        var isPaused = false
+        var isLocked = false
+        var isIdle = false
+
+        func derived() -> BlockState {
+            if isPaused { return .paused }
+            if isLocked { return .locked }
+            if isIdle { return .idle }
+            return .active
+        }
 
         func close(at end: Date) {
             guard let start = segmentStart, end > start else { return }
@@ -69,62 +107,71 @@ public enum Timeline {
             result.append(Block(start: start, end: end, target: segmentTarget, state: segmentState))
         }
 
-        func open(at start: Date, state: BlockState) {
+        func open(at start: Date) {
             segmentStart = start
-            segmentState = state
+            segmentState = derived()
             segmentTarget = currentTarget
+        }
+
+        /// Ends the open segment and starts a new one, but only when the state the user
+        /// would recognise has actually changed. A redundant event, such as idle ending
+        /// when nothing was idle, must not split a block in two.
+        func settle(at date: Date) {
+            guard derived() != segmentState else { return }
+            close(at: date)
+            open(at: date)
         }
 
         for recorded in events.sorted(by: { $0.at < $1.at }) {
             switch recorded.event {
             case .focused(let target):
-                // While idle or paused, a focus change is noted but does not end the
-                // block. It becomes the target of the next active segment.
-                guard segmentState == .active else {
-                    currentTarget = target
-                    continue
-                }
-                guard target != currentTarget else { continue }
-                close(at: recorded.at)
                 currentTarget = target
-                open(at: recorded.at, state: .active)
+                // Only work splits on a change of window. While away, the new target is
+                // remembered and nothing else happens.
+                guard derived() == .active else { continue }
+                if segmentStart == nil {
+                    open(at: recorded.at)
+                } else if segmentTarget != target {
+                    close(at: recorded.at)
+                    open(at: recorded.at)
+                }
 
             case .idleBegan:
-                guard segmentState == .active else { continue }
-                close(at: recorded.at)
-                open(at: recorded.at, state: .idle)
+                isIdle = true
+                settle(at: recorded.at)
 
             case .idleEnded:
-                guard segmentState == .idle else { continue }
-                close(at: recorded.at)
-                open(at: recorded.at, state: .active)
+                isIdle = false
+                settle(at: recorded.at)
+
+            case .screenLocked:
+                isLocked = true
+                settle(at: recorded.at)
+
+            case .screenUnlocked:
+                isLocked = false
+                settle(at: recorded.at)
 
             case .paused:
-                guard segmentState != .paused else { continue }
-                close(at: recorded.at)
-                open(at: recorded.at, state: .paused)
+                isPaused = true
+                settle(at: recorded.at)
 
             case .resumed:
-                guard segmentState == .paused else { continue }
-                close(at: recorded.at)
-                open(at: recorded.at, state: .active)
+                isPaused = false
+                settle(at: recorded.at)
 
             case .stopped:
+                // Capture ended. Close what is open and forget everything, because the next
+                // event in the log belongs to a different run of the application and must
+                // not inherit this one's idleness or its idea of what was frontmost.
                 close(at: recorded.at)
                 segmentStart = nil
-                // Resetting the state matters as much as closing the segment. Stopping
-                // while idle used to leave the machine idle forever, so every `focused`
-                // event in the next session took the "note it but do not open a block"
-                // branch and an entire day of work after a restart recorded as nothing.
-                // Invisible until the log could span two runs, which is to say until the
-                // store existed.
                 segmentState = .active
-                // Forgetting what was frontmost matters too. Held on to, the first focus
-                // event of the next session is deduplicated away whenever the user quit
-                // and reopened in the same application, which is the common case. The time
-                // from launch to their first app switch, potentially hours, recorded as
-                // nothing at all.
+                segmentTarget = nil
                 currentTarget = nil
+                isPaused = false
+                isLocked = false
+                isIdle = false
             }
         }
 

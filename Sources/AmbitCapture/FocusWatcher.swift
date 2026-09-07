@@ -167,6 +167,15 @@ public final class FocusWatcher: NSObject {
             .defaultMode
         )
 
+        // Everything needed to read titles is now in place, so say so.
+        //
+        // This used to be missing entirely: health was only ever written on a failure, so
+        // after the user granted the permission and titles started flowing the state stayed
+        // on "waiting for Accessibility" for the rest of the run. The interface would have
+        // gone on asking for something it had already been given.
+        hasEverBeenTrusted = true
+        health = .observing
+
         refreshWindow(for: app)
     }
 
