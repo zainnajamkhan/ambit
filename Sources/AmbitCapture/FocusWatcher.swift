@@ -55,6 +55,10 @@ public final class FocusWatcher: NSObject {
     /// Fires only when health actually changes, so it is safe to drive an interface from.
     public var onHealthChange: ((Health) -> Void)?
 
+    /// What must never be written down. Defaults to the rules nobody should have to think
+    /// of; the app replaces this with the user's own list plus those.
+    public var exclusions: ExclusionPolicy = .builtIn
+
     public private(set) var health: Health = .awaitingPermission {
         didSet {
             guard health != oldValue else { return }
@@ -281,12 +285,18 @@ public final class FocusWatcher: NSObject {
     /// no part in deciding whether anything happened.
     private func emit(title: String?, for app: NSRunningApplication) {
         let name = app.localizedName ?? "Unknown"
-        let target = FocusTarget(
+        let observed = FocusTarget(
             bundleIdentifier: app.bundleIdentifier ?? "pid.\(app.processIdentifier)",
             applicationName: name,
             windowTitle: WindowTitleNormalizer.normalize(title, applicationName: name),
             rawWindowTitle: title
         )
+
+        // Redaction happens here, at the narrowest point, before the target reaches the
+        // callback or even the deduplication memory. An excluded window title must not
+        // exist anywhere outside this function's own stack frame.
+        let target = exclusions.redacting(observed)
+
         guard target != lastEmitted else { return }
         lastEmitted = target
         onFocus?(target)
