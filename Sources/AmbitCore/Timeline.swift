@@ -112,6 +112,19 @@ public enum Timeline {
             case .stopped:
                 close(at: recorded.at)
                 segmentStart = nil
+                // Resetting the state matters as much as closing the segment. Stopping
+                // while idle used to leave the machine idle forever, so every `focused`
+                // event in the next session took the "note it but do not open a block"
+                // branch and an entire day of work after a restart recorded as nothing.
+                // Invisible until the log could span two runs, which is to say until the
+                // store existed.
+                segmentState = .active
+                // Forgetting what was frontmost matters too. Held on to, the first focus
+                // event of the next session is deduplicated away whenever the user quit
+                // and reopened in the same application, which is the common case. The time
+                // from launch to their first app switch, potentially hours, recorded as
+                // nothing at all.
+                currentTarget = nil
             }
         }
 

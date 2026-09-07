@@ -45,7 +45,7 @@ let package = Package(
 
         .executableTarget(
             name: "ambit-spike-ax",
-            dependencies: ["AmbitCapture", "AmbitCore"],
+            dependencies: ["AmbitCapture", "AmbitCore", "AmbitStore"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
 

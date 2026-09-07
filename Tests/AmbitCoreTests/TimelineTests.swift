@@ -144,6 +144,70 @@ struct TimelineTests {
         #expect(blocks[0].end == t(120))
     }
 
+    @Test("quitting while idle does not swallow the next session's work")
+    func stopWhileIdleResetsState() {
+        // The log of two runs of the app end to end. The first quits while the user is
+        // away, which is what happens to anyone who walks off and shuts the lid.
+        let blocks = Timeline.blocks(
+            from: log([
+                (0, .focused(xcode())),
+                (60, .idleBegan),
+                (120, .stopped),
+                // second run
+                (600, .focused(safari())),
+            ]),
+            upTo: t(900)
+        )
+        #expect(blocks.map(\.state) == [.active, .idle, .active])
+        #expect(blocks[2].target == safari(), "the second session must record work")
+        #expect(blocks[2].duration == 300)
+    }
+
+    @Test("quitting while paused also resets, so the next session is not lost")
+    func stopWhilePausedResetsState() {
+        let blocks = Timeline.blocks(
+            from: log([
+                (0, .focused(xcode())),
+                (60, .paused),
+                (120, .stopped),
+                (600, .focused(safari())),
+            ]),
+            upTo: t(900)
+        )
+        #expect(blocks.map(\.state) == [.active, .paused, .active])
+        #expect(blocks[2].target == safari())
+    }
+
+    @Test("reopening in the same application still records it")
+    func stopThenSameApplication() {
+        // Quit in Xcode, come back later, still in Xcode. Deduplication used to eat the
+        // first event of the new session, so everything until the next app switch, which
+        // could be hours, was recorded as nothing.
+        let blocks = Timeline.blocks(
+            from: log([
+                (0, .focused(xcode())),
+                (120, .stopped),
+                (600, .focused(xcode())),
+            ]),
+            upTo: t(900)
+        )
+        #expect(blocks.count == 2)
+        #expect(blocks[1].start == t(600))
+        #expect(blocks[1].duration == 300)
+        #expect(blocks[1].target == xcode())
+    }
+
+    @Test("the time the app was not running is not recorded as anything")
+    func stopLeavesNoGapBlock() {
+        let blocks = Timeline.blocks(
+            from: log([(0, .focused(xcode())), (120, .stopped), (600, .focused(safari()))]),
+            upTo: t(700)
+        )
+        #expect(blocks.count == 2)
+        #expect(blocks[0].end == t(120))
+        #expect(blocks[1].start == t(600), "the app was off for those eight minutes")
+    }
+
     @Test("events arriving out of order are sorted before folding")
     func outOfOrderEvents() {
         let scrambled = log([(120, .focused(safari())), (0, .focused(xcode()))])

@@ -12,6 +12,7 @@
 
 import AmbitCapture
 import AmbitCore
+import AmbitStore
 import AppKit
 
 // MARK: - Logging
@@ -50,25 +51,53 @@ func log(_ message: String) {
 
 // MARK: - Event log
 //
-// Everything the watcher reports is appended here, exactly as the real store will do it.
-// Folding it at the end proves the pure core and the system edge agree about reality.
+// Everything the watcher reports goes straight to disk. Writing one small row per event on
+// the main thread is fine at this scale, a handful a minute, and it means a crash loses at
+// most the event in flight. The real app will batch on quit and on sleep instead.
 
-let recorded = Recorder()
+let store: EventStore
+let storeURL: URL
+do {
+    storeURL = try SQLiteEventStore.defaultURL()
+    store = try SQLiteEventStore(url: storeURL)
+} catch {
+    FileHandle.standardError.write(Data("cannot open the event store: \(error)\n".utf8))
+    exit(1)
+}
+
+let recorded = Recorder(store: store)
 
 final class Recorder {
-    private var events: [RecordedEvent] = []
+    private let store: EventStore
     private let lock = NSLock()
 
+    init(store: EventStore) { self.store = store }
+
     func append(_ event: ActivityEvent) {
+        let event = RecordedEvent(at: Date(), event: event)
         lock.lock()
         defer { lock.unlock() }
-        events.append(RecordedEvent(at: Date(), event: event))
+        do {
+            try store.append(event)
+        } catch {
+            // A tracker that dies because the disk is full is worse than one that keeps
+            // watching and says it lost something.
+            log("STORE    write failed: \(error)")
+        }
     }
 
-    func snapshot() -> [RecordedEvent] {
+    /// Today's events, which is what the day view will ask for. Reading the entire log
+    /// would work today and stop working after a few months of use.
+    func today() -> [RecordedEvent] {
+        let start = Calendar.current.startOfDay(for: Date())
         lock.lock()
         defer { lock.unlock() }
-        return events
+        do {
+            return try store.events(from: start, to: Date().addingTimeInterval(1))
+        } catch {
+            log("STORE    read failed: \(error)")
+            return []
+        }
     }
 }
 
@@ -80,7 +109,7 @@ func describe(_ target: FocusTarget) -> String {
 }
 
 func dumpTimeline() {
-    let events = recorded.snapshot()
+    let events = recorded.today()
     let blocks = Timeline.blocks(from: events, upTo: Date())
 
     log("")
@@ -108,7 +137,16 @@ application.setActivationPolicy(.accessory)
 log("")
 log("═══ Ambit spike 1: Accessibility and window titles ═══")
 log("log file: \(logURL.path)")
+log("store:    \(storeURL.path)")
 log("trusted at launch: \(AccessibilityAuthorization.isTrusted)")
+
+// Proof that anything was kept at all. On a first run this is zero; on every run after
+// that it is the reason this step existed.
+if let count = try? store.eventCount(), let earliest = try? store.earliestEventDate() {
+    log("store holds \(count) events, oldest \(stamp.string(from: earliest))")
+} else {
+    log("store is empty")
+}
 
 // Fire the prompt regardless. It shows at most once per application, ever, and asking is
 // what puts the app into the System Settings list in the first place.

@@ -3,7 +3,7 @@
 Everything needed to pick this project back up cold, plus the platform facts that were
 expensive to learn.
 
-Last updated 8 September 2026. State: **S0 in progress. Spike 1 proven except revocation.**
+Last updated 8 September 2026. State: **S1 begun. The log persists. Spike 1 proven except revocation.**
 
 Companion to `../quiet/KNOWLEDGE-BASE.md`, which holds the sandbox, App Group, Safari
 extension, StoreKit and app lifecycle facts. Those are not repeated here. Read both.
@@ -59,12 +59,15 @@ Sources/
   AmbitCore/               PURE. No frameworks, no I/O, no clock. Swift 6 language mode.
     ActivityEvent.swift    the append only event model
     Timeline.swift         the fold from events to blocks
+  AmbitStore/              SQLite through GRDB. Append and read only. Swift 6 mode.
+    EventStore.swift       the protocol, so nothing above knows about SQLite
+    SQLiteEventStore.swift flat columns, not a serialised blob, so the file stays readable
   AmbitCapture/            the system edge. Swift 5 language mode, see section 5.
     AccessibilityAuthorization.swift
     FocusWatcher.swift     NSWorkspace + AXObserver
     IdleMonitor.swift      CGEventSource
   ambit-spike-ax/          spike 1 runner
-Tests/AmbitCoreTests/      14 tests, all against the pure fold
+Tests/                     60 tests across the core and the store
 Tools/
   test.sh                  build, test, lint. The one command.
   make-app.sh              wrap an executable in a signed .app bundle
@@ -163,8 +166,24 @@ Both were invisible to the tests and would have shipped.
    was not: it now fires only when a title is genuinely unavailable. A short session went
    from 8 events and 5 blocks to 6 events and 3 blocks.
 
+4. **Quitting while idle silently discarded the next session.** `.stopped` closed the open
+   segment but left the state machine set to `idle`. Every `focused` event in the next run
+   then took the "note it but open nothing" branch, forever. A full day of work after a
+   restart folded to nothing.
+5. **Reopening in the same application lost everything until the first app switch.** Same
+   root cause, second symptom: `.stopped` also had to forget what was frontmost. Held on
+   to, the first focus event of the new session matched the last one of the old session and
+   was deduplicated away. Quit in Xcode, come back in Xcode, and the hours until you next
+   switched applications recorded as nothing.
+
+Neither of the last two could exist before this week, because until the store was written
+a log could not span two runs of the app. On the real database that had accumulated during
+testing, fixing them took the same 14 events from 5 blocks to 8, and tripled the recorded
+active time.
+
 This is the argument for section 1 of the skill in one paragraph. Fourteen passing tests
-said nothing about either.
+said nothing about the first two, and fifty six said nothing about the next two. Every one
+of them was found by running the thing and reading the output.
 
 ---
 
@@ -212,8 +231,13 @@ said nothing about either.
   when an application steals focus while the user is away. In normal use a switch requires
   input, which ends idle on the next poll, so this is rarely visible.
 - **Prompt on return, or silently mark idle?** Unresolved. Test during S1.
-- **The store.** Not written. Plan calls for SQLite through GRDB, since this is a time
-  series with many small rows and a lot of range queries.
+- **The store is written**, GRDB 7.11.1, at
+  `~/Library/Application Support/Ambit/ambit.sqlite`. Two things still owed on it: it moves
+  into the App Group container once sandboxed, because the Safari extension's handler has
+  to write into the same log, and it is not encrypted yet (S7, key in the Keychain).
+- **Writes are one row at a time on the main thread.** Fine at a handful of events a
+  minute, and it means a crash loses at most the event in flight. Batch on quit and on
+  sleep if the volume ever justifies it.
 
 ---
 
