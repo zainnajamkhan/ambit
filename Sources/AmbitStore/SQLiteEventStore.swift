@@ -88,6 +88,14 @@ public final class SQLiteEventStore: EventStore {
                 table.add(column: "url", .text)
             }
         }
+        // A general column for event kinds that carry their own data, rather than a new
+        // column per kind. Corrections are the first; anything later fits without another
+        // schema change, and the flat columns above stay readable for the common events.
+        migrator.registerMigration("addPayload") { db in
+            try db.alter(table: "event") { table in
+                table.add(column: "payload", .text)
+            }
+        }
         return migrator
     }
 
@@ -172,6 +180,7 @@ private struct EventRecord: Codable, FetchableRecord, PersistableRecord {
     var windowTitle: String?
     var rawWindowTitle: String?
     var url: String?
+    var payload: String?
 
     init(_ recorded: RecordedEvent) {
         id = nil
@@ -185,6 +194,9 @@ private struct EventRecord: Codable, FetchableRecord, PersistableRecord {
             windowTitle = target.windowTitle
             rawWindowTitle = target.rawWindowTitle
             url = target.url
+        case .assigned(let correction):
+            kind = Kind.assigned
+            payload = (try? JSONEncoder().encode(correction)).map { String(decoding: $0, as: UTF8.self) }
         case .idleBegan:
             kind = Kind.idleBegan
         case .idleEnded:
@@ -221,6 +233,17 @@ private struct EventRecord: Codable, FetchableRecord, PersistableRecord {
                 url: url
             )
             return RecordedEvent(at: date, event: .focused(target))
+        case Kind.assigned:
+            // A correction with no payload, or one this build cannot read, is dropped
+            // rather than guessed at. Inventing an assignment would put hours against the
+            // wrong client, which is worse than losing one correction.
+            guard let payload,
+                  let correction = try? JSONDecoder().decode(
+                      AssignmentCorrection.self, from: Data(payload.utf8)
+                  )
+            else { return nil }
+            return RecordedEvent(at: date, event: .assigned(correction))
+
         case Kind.idleBegan: return RecordedEvent(at: date, event: .idleBegan)
         case Kind.idleEnded: return RecordedEvent(at: date, event: .idleEnded)
         case Kind.screenLocked: return RecordedEvent(at: date, event: .screenLocked)
@@ -236,6 +259,7 @@ private struct EventRecord: Codable, FetchableRecord, PersistableRecord {
     /// database exists in the wild they cannot be renamed, only added to.
     private enum Kind {
         static let focused = "focused"
+        static let assigned = "assigned"
         static let idleBegan = "idleBegan"
         static let idleEnded = "idleEnded"
         static let screenLocked = "screenLocked"

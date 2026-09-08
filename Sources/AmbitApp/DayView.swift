@@ -127,9 +127,49 @@ struct DayView: View {
             List(Array(controller.classifiedBlocks.enumerated()), id: \.offset) { _, entry in
                 BlockRow(entry: entry)
                     .listRowSeparator(.visible)
+                    .contextMenu { menu(for: entry) }
             }
             .listStyle(.inset)
         }
+    }
+
+    /// Right click a block to overrule the rules for it.
+    ///
+    /// A context menu rather than dragging block edges. Dragging is nicer and is the thing
+    /// to build once the interaction has been lived with, but reassigning one block is the
+    /// correction people actually need, and offering it now beats offering nothing.
+    @ViewBuilder
+    private func menu(for entry: ClassifiedBlock) -> some View {
+        if entry.block.state == .active {
+            let projects = AmbitServices.shared.settings.settings.rules.projects
+
+            if projects.isEmpty {
+                Text("No projects yet")
+            } else {
+                ForEach(projects) { project in
+                    Button {
+                        controller.assign(entry.block, to: .project(project.id))
+                    } label: {
+                        Label(project.name, systemImage: isCurrent(project, entry) ? "checkmark" : "")
+                    }
+                }
+            }
+
+            Divider()
+            Button("Not work") { controller.assign(entry.block, to: .notWork) }
+
+            if entry.classification?.source == .manual || entry.isUnclassified {
+                Button("Let the rules decide") {
+                    controller.assign(entry.block, to: .followRules)
+                }
+            }
+        } else {
+            Text("Away time cannot be assigned")
+        }
+    }
+
+    private func isCurrent(_ project: Project, _ entry: ClassifiedBlock) -> Bool {
+        entry.classification?.project.id == project.id
     }
 
     private func message(title: String, detail: String, symbol: String) -> some View {
@@ -206,6 +246,14 @@ private struct BlockRow: View {
                         Text("Unsorted")
                             .font(.caption)
                             .foregroundStyle(.tertiary)
+                    }
+
+                    if entry.classification?.source == .manual {
+                        Image(systemName: "hand.point.up.left.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .accessibilityLabel("Set by you")
+                            .help("You set this by hand. Rules will not change it.")
                     }
 
                     if entry.classification?.isBillable == true {

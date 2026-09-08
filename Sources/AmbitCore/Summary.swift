@@ -54,7 +54,43 @@ public struct PeriodSummary: Equatable, Sendable {
 public enum Summary {
 
     public static func classify(_ blocks: [Block], with rules: RuleSet) -> [ClassifiedBlock] {
-        blocks.map { ClassifiedBlock(block: $0, classification: rules.classify($0)) }
+        classify(blocks, with: rules, corrections: [:])
+    }
+
+    /// Rules first, then the user's corrections over the top.
+    ///
+    /// That order is the whole point. Rules can be rewritten freely without discarding hand
+    /// corrections made under the old ones, because the corrections are applied afterwards
+    /// rather than baked in.
+    public static func classify(
+        _ blocks: [Block],
+        with rules: RuleSet,
+        corrections: [Date: AssignmentCorrection]
+    ) -> [ClassifiedBlock] {
+        blocks.map { block in
+            var classification = rules.classify(block)
+
+            if let correction = corrections[block.start], block.state == .active {
+                switch correction.intent {
+                case .project(let projectID):
+                    // A correction pointing at a deleted project falls through to whatever
+                    // the rules say, rather than stranding the block nowhere.
+                    if let project = rules.project(id: projectID) {
+                        classification = Classification(
+                            project: project,
+                            isBillable: correction.isBillable ?? project.isBillable,
+                            source: .manual
+                        )
+                    }
+                case .notWork:
+                    classification = nil
+                case .followRules:
+                    break
+                }
+            }
+
+            return ClassifiedBlock(block: block, classification: classification)
+        }
     }
 
     public static func summarise(_ blocks: [Block], with rules: RuleSet) -> PeriodSummary {

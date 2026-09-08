@@ -73,9 +73,21 @@ public struct Classification: Equatable, Sendable {
     public let project: Project
     public let isBillable: Bool
 
-    /// The rule that decided it. Kept so the interface can always answer "why is this here",
-    /// which is the difference between a user correcting a mistake and abandoning the app.
-    public let matchedRuleID: UUID
+    /// Who decided. Kept so the interface can always answer "why is this here", which is the
+    /// difference between a user correcting a mistake and abandoning the app, and so a hand
+    /// correction can be shown as deliberate rather than as something a rule did.
+    public let source: Source
+
+    public enum Source: Equatable, Sendable {
+        case rule(UUID)
+        case manual
+    }
+
+    public init(project: Project, isBillable: Bool, source: Source) {
+        self.project = project
+        self.isBillable = isBillable
+        self.source = source
+    }
 }
 
 /// The user's projects and the rules that sort activity into them.
@@ -114,7 +126,7 @@ public struct RuleSet: Codable, Equatable, Sendable {
             return Classification(
                 project: project,
                 isBillable: rule.isBillable ?? project.isBillable,
-                matchedRuleID: rule.id
+                source: .rule(rule.id)
             )
         }
         return nil

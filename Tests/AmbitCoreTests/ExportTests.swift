@@ -35,7 +35,7 @@ private func entry(
     return ClassifiedBlock(
         block: Block(start: t(from), end: t(to), target: target, state: state),
         classification: classified && state == .active
-            ? Classification(project: northwind, isBillable: true, matchedRuleID: rule.id)
+            ? Classification(project: northwind, isBillable: true, source: .rule(rule.id))
             : nil
     )
 }

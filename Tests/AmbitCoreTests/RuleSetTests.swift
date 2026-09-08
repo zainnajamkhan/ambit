@@ -158,7 +158,7 @@ struct RuleSetTests {
     func matchedRuleIsReported() {
         let rule = Rule(projectID: northwind.id, match: .titleContains("Northwind"))
         let rules = RuleSet(projects: [northwind], rules: [rule])
-        #expect(rules.classify(target(title: "Northwind"))?.matchedRuleID == rule.id)
+        #expect(rules.classify(target(title: "Northwind"))?.source == .rule(rule.id))
     }
 
     // MARK: - Blocks

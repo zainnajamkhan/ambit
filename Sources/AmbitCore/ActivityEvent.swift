@@ -92,6 +92,14 @@ public enum ActivityEvent: Codable, Equatable, Sendable {
     /// The screen unlocked or the display woke.
     case screenUnlocked
 
+    /// The user overruled the rules for one block.
+    ///
+    /// A correction, not an erasure. The original observation stays exactly where it was and
+    /// this is appended after it, so "what Ambit saw" and "what the user says it was" remain
+    /// separable forever. Applying rules and then corrections, in that order, is what lets a
+    /// rule be rewritten later without discarding hand corrections made under the old one.
+    case assigned(AssignmentCorrection)
+
     /// The user switched capture off, or a named Focus did it for them.
     case paused
 
@@ -101,6 +109,42 @@ public enum ActivityEvent: Codable, Equatable, Sendable {
     /// Capture stopped cleanly, at quit or at sleep. Closes whatever block is open so a
     /// crash and a clean exit are distinguishable when the log is read back.
     case stopped
+}
+
+/// One block, reassigned by hand.
+public struct AssignmentCorrection: Codable, Equatable, Sendable {
+
+    /// Which block this is about, identified by when it starts.
+    ///
+    /// The start instant rather than an identifier, because blocks have no identity: they
+    /// are derived by folding and are rebuilt from scratch every time anything changes. A
+    /// start time is the one thing about a block that survives a re-fold.
+    public let blockStart: Date
+
+    /// What the user said about it.
+    public let intent: Intent
+
+    public let isBillable: Bool?
+
+    /// Three answers, not two.
+    ///
+    /// An earlier design used an optional project identifier, where nil meant "not work".
+    /// That left no way to say "actually, never mind, let the rules decide again", so a
+    /// mis-click was permanent in an append only log. Undo has to be sayable.
+    public enum Intent: Codable, Equatable, Sendable {
+        /// File it here, whatever the rules think.
+        case project(UUID)
+        /// Not work for anybody. Beats any rule that would claim it.
+        case notWork
+        /// Forget I said anything. Clears an earlier correction on this block.
+        case followRules
+    }
+
+    public init(blockStart: Date, intent: Intent, isBillable: Bool? = nil) {
+        self.blockStart = blockStart
+        self.intent = intent
+        self.isBillable = isBillable
+    }
 }
 
 /// An event and the instant it happened. The store only ever appends these.

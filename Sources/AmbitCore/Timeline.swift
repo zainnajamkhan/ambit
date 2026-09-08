@@ -160,6 +160,12 @@ public enum Timeline {
                 isPaused = false
                 settle(at: recorded.at)
 
+            case .assigned:
+                // A correction says nothing about what was in front of the user, so it
+                // takes no part in shaping the timeline. It is read separately, by
+                // `corrections(from:)`, and applied when blocks are classified.
+                continue
+
             case .stopped:
                 // Capture ended. Close what is open and forget everything, because the next
                 // event in the log belongs to a different run of the application and must
@@ -176,6 +182,19 @@ public enum Timeline {
         }
 
         close(at: now)
+        return result
+    }
+
+    /// Every hand correction in the log, keyed by the block it applies to.
+    ///
+    /// Later entries win, which is what makes the log append only: changing your mind twice
+    /// appends twice and the last word stands, rather than anything being rewritten.
+    public static func corrections(from events: [RecordedEvent]) -> [Date: AssignmentCorrection] {
+        var result: [Date: AssignmentCorrection] = [:]
+        for recorded in events.sorted(by: { $0.at < $1.at }) {
+            guard case .assigned(let correction) = recorded.event else { continue }
+            result[correction.blockStart] = correction
+        }
         return result
     }
 }

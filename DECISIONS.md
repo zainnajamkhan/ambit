@@ -25,11 +25,21 @@ buried in a commit message. Say the word on any of them and it changes.
 
 ## 2. Open questions I did not answer
 
-**Editing the timeline.** The plan's S2 includes manual editing, splitting and merging
-blocks. Not built. The architecture is ready for it: a correction appends a correcting
-event rather than mutating a row, so the original observation survives. What is undecided
-is the interaction. Drag block edges directly on the timeline, or a small inspector panel?
-Direct manipulation is nicer and considerably more work.
+**Editing the timeline. Partly built, and a decision made for you to overrule.**
+
+Reassigning a block is done: right click any block in the day view and send it to a project,
+mark it not work, or hand it back to the rules. Corrections are appended, never edits, so
+what Ambit observed and what you say about it stay separable, and rewriting a rule later
+does not discard corrections made under the old one. Blocks you set by hand carry a small
+marker so a correction reads as deliberate.
+
+I chose a **context menu** over dragging block edges. Dragging is nicer and is the thing to
+build once the interaction has been lived with; reassigning is the correction people
+actually need and offering it now beat offering nothing. Say the word and it becomes direct
+manipulation.
+
+**Still not built:** splitting one block into two, and merging adjacent ones. Both need a
+decision about what the split point means when the underlying observation says otherwise.
 
 **Idle on return: prompt or stay quiet.** Section 15 of the plan leaves this open and says
 to test it on yourself during S1. Right now idle gaps are recorded silently. Prompting is
@@ -63,18 +73,16 @@ symbol, which is allowed.
 
 Ranked by what stands between here and something you could run for a fortnight.
 
-1. **Timeline editing**, per the open question above. Now the largest gap.
-2. **Onboarding**, including the Accessibility permission walkthrough. The plan calls this
-   out as where the category loses users, and the menu bar currently shows a bare warning
-   with two buttons.
-3. **The Safari extension** (S4). Lower risk than the plan assumed; Quiet already proves the
+1. **Licensing and the free tier gate** (S6). The line is decided but nothing enforces it.
+   Needs `IndieKit` bringing over from Quiet.
+2. **The Safari extension** (S4). Lower risk than the plan assumed; Quiet already proves the
    pipeline. `FocusTarget.url` and the URL rule types are in place waiting for it.
-4. **Sandboxing and the App Group move.** The store is at
+3. **Sandboxing and the App Group move.** The store is at
    `~/Library/Application Support/Ambit/`; sandboxed it has to move into the App Group
    container so the extension's handler can write to the same log.
-5. **Encryption at rest** (S7), key in the Keychain.
-6. **Launch at login** via `SMAppService`.
-7. **App icon, store assets, comparison pages.**
+4. **Encryption at rest** (S7), key in the Keychain.
+5. **Splitting and merging blocks**, per the open question above.
+6. **App icon, store assets, comparison pages.**
 
 ---
 

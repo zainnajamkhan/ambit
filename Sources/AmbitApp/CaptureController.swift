@@ -23,6 +23,7 @@ final class CaptureController: ObservableObject {
     // MARK: - Published state
 
     @Published private(set) var blocks: [Block] = []
+    @Published private(set) var corrections: [Date: AssignmentCorrection] = [:]
     @Published private(set) var health: FocusWatcher.Health = .awaitingPermission
     @Published private(set) var isPaused = false
     @Published private(set) var currentTarget: FocusTarget?
@@ -151,16 +152,31 @@ final class CaptureController: ObservableObject {
     // MARK: - Derived views of the log
 
     var summary: PeriodSummary {
-        Summary.summarise(blocks, with: settingsStore.settings.rules)
+        Summary.summarise(classifiedBlocks)
     }
 
     var classifiedBlocks: [ClassifiedBlock] {
-        Summary.classify(blocks, with: settingsStore.settings.rules)
+        Summary.classify(blocks, with: settingsStore.settings.rules, corrections: corrections)
+    }
+
+    /// Overrule the rules for one block.
+    ///
+    /// Appends rather than edits, so what Ambit observed and what the user says about it
+    /// stay separable, and so the rules can be rewritten later without discarding this.
+    func assign(_ block: Block, to intent: AssignmentCorrection.Intent) {
+        record(.assigned(AssignmentCorrection(blockStart: block.start, intent: intent)))
     }
 
     /// The selected day's week, folded and classified. Used by the week view and by export.
     func weekClassifiedBlocks() -> [ClassifiedBlock] {
-        Summary.classify(weekBlocks(), with: settingsStore.settings.rules)
+        let calendar = Calendar.current
+        let week = calendar.dateInterval(of: .weekOfYear, for: selectedDay)
+        let events = week.flatMap { try? store.events(from: $0.start, to: $0.end) } ?? []
+        return Summary.classify(
+            weekBlocks(),
+            with: settingsStore.settings.rules,
+            corrections: Timeline.corrections(from: events)
+        )
     }
 
     private func weekBlocks() -> [Block] {
@@ -196,7 +212,7 @@ final class CaptureController: ObservableObject {
     }
 
     func weekSummary() -> PeriodSummary {
-        Summary.summarise(weekBlocks(), with: settingsStore.settings.rules)
+        Summary.summarise(weekClassifiedBlocks())
     }
 
     // MARK: - Plumbing
@@ -227,6 +243,7 @@ final class CaptureController: ObservableObject {
             // The open block runs to now, or to the end of the day being viewed, whichever
             // is sooner. Yesterday must not appear to still be in progress.
             blocks = Timeline.blocks(from: events, upTo: min(end, Date()))
+            corrections = Timeline.corrections(from: events)
             storeFailure = nil
         } catch {
             storeFailure = error.localizedDescription

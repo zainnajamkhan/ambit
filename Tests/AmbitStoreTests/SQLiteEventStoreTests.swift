@@ -296,3 +296,56 @@ struct SQLiteEventStoreTests {
         #expect(fromDisk.last?.end == t(2400))
     }
 }
+
+@Suite("Corrections in the store")
+struct CorrectionStorageTests {
+
+    @Test("a correction survives the database with all three of its fields")
+    func correctionRoundTrips() throws {
+        let store = try SQLiteEventStore.inMemory()
+        let project = UUID()
+        let correction = AssignmentCorrection(blockStart: t(0), intent: .project(project), isBillable: false)
+        try store.append(RecordedEvent(at: t(30), event: .assigned(correction)))
+
+        guard case .assigned(let read)? = try store.allEvents().first?.event else {
+            Issue.record("expected an assignment")
+            return
+        }
+        #expect(read.blockStart == t(0))
+        #expect(read.intent == .project(project))
+        #expect(read.isBillable == false)
+    }
+
+    @Test("an unassignment round trips, nil project and all")
+    func unassignmentRoundTrips() throws {
+        let store = try SQLiteEventStore.inMemory()
+        try store.append(
+            RecordedEvent(at: t(30), event: .assigned(.init(blockStart: t(0), intent: .notWork)))
+        )
+        guard case .assigned(let read)? = try store.allEvents().first?.event else {
+            Issue.record("expected an assignment")
+            return
+        }
+        // "Not work" has to survive as itself. Read back as "no correction" it would
+        // silently hand the block back to whatever rule the user was overruling.
+        #expect(read.intent == .notWork)
+    }
+
+    @Test("a correction row with no payload is dropped rather than guessed at")
+    func payloadlessCorrectionIsDropped() throws {
+        let url = temporaryStoreURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        _ = try SQLiteEventStore(url: url)
+        let raw = try DatabaseQueue(path: url.path)
+        try raw.write { db in
+            try db.execute(
+                sql: "INSERT INTO event (at, kind) VALUES (?, ?)",
+                arguments: [t(0).timeIntervalSince1970, "assigned"]
+            )
+        }
+        // Inventing an assignment would put hours against the wrong client, which is worse
+        // than losing one correction.
+        #expect(try SQLiteEventStore(url: url).allEvents().isEmpty)
+    }
+}
