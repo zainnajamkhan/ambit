@@ -6,3 +6,9 @@ DerivedData/
 *.xcuserdatad
 xcuserdata/
 Spikes/out/
+
+# Xcode per-user state. The shared scheme under xcshareddata IS committed;
+# an unshared scheme cannot carry its settings into the repository.
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/

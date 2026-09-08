@@ -29,11 +29,17 @@ want and judges whether the result is acceptable. Claude implements, verifies, r
    launching.
 
 **Claude runs the builds on this project.** This overrides the standing
-`user-builds-not-claude` preference, which applies to scoped to the day-job repositories.
+`user-builds-not-claude` preference, which is scoped to the day-job repositories.
+
+**There is an Xcode project, and it overrides the skill's "CLI-only, no Xcode" rule.**
+`swift build` and `Tools/test.sh` stay the fast loop, but `Ambit.xcodeproj` is what carries
+the entitlements, the signing and the archive, and it is the only way to debug in Xcode.
+Entitlements are the product here, so they cannot live outside a real target.
 
 ## Commands
 
 ```bash
+open Ambit.xcodeproj            # debug and run in Xcode (scheme "Ambit", shared)
 ./Tools/test.sh                 # build, test, lint. The one command.
 ./Tools/make-app.sh             # wrap the spike in a signed .app bundle
 open build/ambit-spike-ax.app   # run it (NEVER run the binary directly, see below)

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  This file is the product.
+
+	  There is deliberately no com.apple.security.network.client key. Its absence is
+	  what makes Ambit structurally incapable of opening an outbound connection, and
+	  that is the one claim no competitor with a backend can copy. Anyone can check:
+
+	      codesign -d --entitlements - /Applications/Ambit.app
+
+	  Do not add a network entitlement. If something appears to need one, the thing
+	  that needs it does not belong in this app.
+
+	  App Sandbox is NOT enabled yet. Turning it on moves the database into the App
+	  Group container, which has to happen at the same time as the Safari extension
+	  work, or the existing log is orphaned. Tracked in DECISIONS.md.
+	-->
+	<key>com.apple.security.app-sandbox</key>
+	<false/>
+</dict>
+</plist>
