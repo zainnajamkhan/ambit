@@ -349,3 +349,79 @@ struct CorrectionStorageTests {
         #expect(try SQLiteEventStore(url: url).allEvents().isEmpty)
     }
 }
+
+@Suite("Reading around a window")
+struct EventStoreWindowTests {
+
+    private func store(_ events: [RecordedEvent]) throws -> SQLiteEventStore {
+        let store = try SQLiteEventStore.inMemory()
+        try store.append(contentsOf: events)
+        return store
+    }
+
+    @Test("the events before a moment come back oldest first and bounded")
+    func lookbackIsOrderedAndBounded() throws {
+        let events = (0..<10).map {
+            RecordedEvent(at: t(TimeInterval($0) * 60), event: .focused(xcode("File\($0).swift")))
+        }
+        let store = try store(events)
+
+        let recent = try store.events(endingBefore: t(600), limit: 3)
+        #expect(recent.count == 3)
+        // Oldest first, because the fold reads forwards.
+        #expect(recent.map(\.at) == [t(420), t(480), t(540)])
+    }
+
+    @Test("a lookback from before the log begins is empty rather than an error")
+    func lookbackBeforeTheBeginning() throws {
+        let store = try store([RecordedEvent(at: t(600), event: .idleBegan)])
+        #expect(try store.events(endingBefore: t(0), limit: 50).isEmpty)
+    }
+
+    @Test("asking for no events returns none and reads nothing")
+    func lookbackOfZero() throws {
+        let store = try store([RecordedEvent(at: t(0), event: .idleBegan)])
+        #expect(try store.events(endingBefore: t(600), limit: 0).isEmpty)
+    }
+
+    @Test("a correction is found by the day it describes, not the day it was typed")
+    func correctionsAreNotTrappedInTheDayTheyWereMade() throws {
+        // Monday's work, and a correction to it made on Friday.
+        let monday = t(0)
+        let friday = t(4 * 86_400)
+        let correction = AssignmentCorrection(blockStart: monday, intent: .notWork)
+
+        let store = try store([
+            RecordedEvent(at: monday, event: .focused(xcode("Northwind.swift"))),
+            RecordedEvent(at: friday, event: .assigned(correction)),
+        ])
+
+        // Reading Monday alone cannot see it, which is why looking there was the bug.
+        let mondayOnly = try store.events(from: monday, to: t(86_400))
+        #expect(Timeline.corrections(from: mondayOnly).isEmpty)
+
+        // Read as corrections, it is found whenever it was written.
+        let found = Timeline.corrections(from: try store.assignments())
+        #expect(found[monday]?.intent == .notWork)
+    }
+
+    @Test("corrections come back in the order they were made, so the last word stands")
+    func laterCorrectionsWin() throws {
+        let block = t(0)
+        let store = try store([
+            RecordedEvent(at: t(100), event: .assigned(AssignmentCorrection(blockStart: block, intent: .notWork))),
+            RecordedEvent(at: t(200), event: .assigned(AssignmentCorrection(blockStart: block, intent: .followRules))),
+        ])
+        #expect(Timeline.corrections(from: try store.assignments())[block]?.intent == .followRules)
+    }
+
+    @Test("only corrections come back, not the whole log")
+    func assignmentsAreOnlyAssignments() throws {
+        let store = try store([
+            RecordedEvent(at: t(0), event: .focused(xcode("Northwind.swift"))),
+            RecordedEvent(at: t(60), event: .idleBegan),
+            RecordedEvent(at: t(120), event: .assigned(AssignmentCorrection(blockStart: t(0), intent: .notWork))),
+        ])
+        #expect(try store.assignments().count == 1)
+    }
+}

@@ -27,6 +27,24 @@ public protocol EventStore {
     /// both claim an event landing exactly on midnight.
     func events(from start: Date, to end: Date) throws -> [RecordedEvent]
 
+    /// The last `limit` events before `date`, oldest first.
+    ///
+    /// The day view needs to know what was already going on at midnight, and that is decided
+    /// by a handful of recent events rather than by the whole log. A bounded look backwards
+    /// keeps the cost the same whether the log is a day old or a year old.
+    func events(endingBefore date: Date, limit: Int) throws -> [RecordedEvent]
+
+    /// Every hand correction ever made, oldest first.
+    ///
+    /// Fetched whole rather than by date range, because a correction is stamped with the
+    /// moment it was made and not with the moment it describes. Someone tidying up Monday's
+    /// timeline on Friday writes a Friday row about a Monday block, so looking for it inside
+    /// Monday finds nothing and the correction appears not to have worked.
+    ///
+    /// Cheap to read in full: corrections are made by hand, so there are as many of them as
+    /// the user has personally typed.
+    func assignments() throws -> [RecordedEvent]
+
     func allEvents() throws -> [RecordedEvent]
     func eventCount() throws -> Int
 

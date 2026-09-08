@@ -131,6 +131,31 @@ public final class SQLiteEventStore: EventStore {
         }
     }
 
+    public func events(endingBefore date: Date, limit: Int) throws -> [RecordedEvent] {
+        guard limit > 0 else { return [] }
+        return try database.read { db in
+            // Fetched newest first so the index on `at` can stop after `limit` rows, then
+            // turned back the right way round, because the fold reads forwards.
+            try EventRecord
+                .filter(Column("at") < date.timeIntervalSince1970)
+                .order(Column("at").desc, Column("id").desc)
+                .limit(limit)
+                .fetchAll(db)
+                .reversed()
+                .compactMap(\.recordedEvent)
+        }
+    }
+
+    public func assignments() throws -> [RecordedEvent] {
+        try database.read { db in
+            try EventRecord
+                .filter(Column("kind") == EventRecord.Kind.assigned)
+                .order(Column("at"), Column("id"))
+                .fetchAll(db)
+                .compactMap(\.recordedEvent)
+        }
+    }
+
     public func allEvents() throws -> [RecordedEvent] {
         try database.read { db in
             try EventRecord
@@ -257,7 +282,7 @@ private struct EventRecord: Codable, FetchableRecord, PersistableRecord {
 
     /// The stored spelling of each event kind. These strings are a file format: once a
     /// database exists in the wild they cannot be renamed, only added to.
-    private enum Kind {
+    fileprivate enum Kind {
         static let focused = "focused"
         static let assigned = "assigned"
         static let idleBegan = "idleBegan"

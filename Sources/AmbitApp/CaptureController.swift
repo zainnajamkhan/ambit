@@ -169,23 +169,18 @@ final class CaptureController: ObservableObject {
 
     /// The selected day's week, folded and classified. Used by the week view and by export.
     func weekClassifiedBlocks() -> [ClassifiedBlock] {
-        let calendar = Calendar.current
-        let week = calendar.dateInterval(of: .weekOfYear, for: selectedDay)
-        let events = week.flatMap { try? store.events(from: $0.start, to: $0.end) } ?? []
-        return Summary.classify(
+        Summary.classify(
             weekBlocks(),
             with: settingsStore.settings.rules,
-            corrections: Timeline.corrections(from: events)
+            corrections: (try? Timeline.corrections(from: store.assignments())) ?? [:]
         )
     }
 
     private func weekBlocks() -> [Block] {
-        let calendar = Calendar.current
-        guard let week = calendar.dateInterval(of: .weekOfYear, for: selectedDay) else {
+        guard let week = Calendar.current.dateInterval(of: .weekOfYear, for: selectedDay) else {
             return blocks
         }
-        let events = (try? store.events(from: week.start, to: week.end)) ?? []
-        return Timeline.blocks(from: events, upTo: min(week.end, Date()))
+        return (try? foldedBlocks(in: week)) ?? []
     }
 
     /// Rules worth offering for the unsorted time in a given set of blocks.
@@ -239,14 +234,28 @@ final class CaptureController: ObservableObject {
         let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
 
         do {
-            let events = try store.events(from: start, to: end)
             // The open block runs to now, or to the end of the day being viewed, whichever
             // is sooner. Yesterday must not appear to still be in progress.
-            blocks = Timeline.blocks(from: events, upTo: min(end, Date()))
-            corrections = Timeline.corrections(from: events)
+            blocks = try foldedBlocks(in: DateInterval(start: start, end: end))
+            corrections = Timeline.corrections(from: try store.assignments())
             storeFailure = nil
         } catch {
             storeFailure = error.localizedDescription
         }
+    }
+
+    /// How far back to look for the state a window opens in.
+    ///
+    /// The fold needs to know what was already happening at midnight, and that is settled by
+    /// the last event of each kind rather than by all of them. Fifty is far more than enough:
+    /// while capture is paused nothing else is written at all, so the pause itself is always
+    /// inside this many rows, and every other state is set by something more recent still.
+    private static let carryInLookback = 50
+
+    /// One window of the log, folded with whatever was already in progress when it opened.
+    private func foldedBlocks(in window: DateInterval) throws -> [Block] {
+        let before = try store.events(endingBefore: window.start, limit: Self.carryInLookback)
+        let inside = try store.events(from: window.start, to: window.end)
+        return Timeline.blocks(from: before + inside, in: window, upTo: min(window.end, Date()))
     }
 }

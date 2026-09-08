@@ -185,6 +185,68 @@ public enum Timeline {
         return result
     }
 
+    /// The blocks belonging to one window of time, with the state carried in from before it.
+    ///
+    /// The plain fold above starts from nothing, which is correct when it is handed the whole
+    /// log and wrong when it is handed one day of it. Someone still working at midnight has
+    /// an open block that began yesterday, and a fold that starts at midnight has never seen
+    /// the event that opened it, so it records nothing until the next time they switch
+    /// window. That is real worked time, quietly missing from the day it happened on.
+    ///
+    /// So `events` is expected to reach back past `interval`, far enough to establish what
+    /// was already going on, and everything outside the window is dropped afterwards.
+    ///
+    /// Blocks are also cut at midnight rather than allowed to straddle it. Time belongs to
+    /// the day it was spent on, and cutting here is what makes a week agree with the seven
+    /// days inside it: both views end up describing the same pieces, with the same start
+    /// dates, so a correction made against one is recognised by the other.
+    public static func blocks(
+        from events: [RecordedEvent],
+        in interval: DateInterval,
+        upTo now: Date,
+        calendar: Calendar = .current
+    ) -> [Block] {
+        blocks(from: events, upTo: min(now, interval.end))
+            .flatMap { splitAtDayBoundaries($0, calendar: calendar) }
+            .compactMap { clip($0, to: interval) }
+    }
+
+    /// One block as one piece per calendar day it touches.
+    private static func splitAtDayBoundaries(_ block: Block, calendar: Calendar) -> [Block] {
+        var pieces: [Block] = []
+        var cursor = block.start
+
+        while cursor < block.end {
+            // Added rather than measured in seconds, because a day is not always 86,400 of
+            // them. On the two days a year that a clock changes, arithmetic would put the
+            // boundary in the wrong place.
+            let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: cursor))
+
+            // A calendar that will not advance would spin here forever. It should not be
+            // possible, and a timeline that hangs the interface would be a poor way to
+            // find out that it was.
+            guard let boundary = midnight, boundary > cursor else {
+                pieces.append(Block(start: cursor, end: block.end, target: block.target, state: block.state))
+                break
+            }
+
+            let end = min(boundary, block.end)
+            pieces.append(Block(start: cursor, end: end, target: block.target, state: block.state))
+            cursor = end
+        }
+
+        return pieces
+    }
+
+    /// A block trimmed to the window, or nil when it falls outside it entirely.
+    private static func clip(_ block: Block, to interval: DateInterval) -> Block? {
+        let start = max(block.start, interval.start)
+        let end = min(block.end, interval.end)
+        guard end > start else { return nil }
+        guard start != block.start || end != block.end else { return block }
+        return Block(start: start, end: end, target: block.target, state: block.state)
+    }
+
     /// Every hand correction in the log, keyed by the block it applies to.
     ///
     /// Later entries win, which is what makes the log append only: changing your mind twice

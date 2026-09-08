@@ -146,6 +146,8 @@ private struct NullEventStore: EventStore {
     func append(_ event: RecordedEvent) throws {}
     func append(contentsOf events: [RecordedEvent]) throws {}
     func events(from start: Date, to end: Date) throws -> [RecordedEvent] { [] }
+    func events(endingBefore date: Date, limit: Int) throws -> [RecordedEvent] { [] }
+    func assignments() throws -> [RecordedEvent] { [] }
     func allEvents() throws -> [RecordedEvent] { [] }
     func eventCount() throws -> Int { 0 }
     func earliestEventDate() throws -> Date? { nil }
