@@ -66,6 +66,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MainActor.assumeIsolated { OnboardingWindow.present() }
     }
 
+    /// Opening the app when it is already running has to do something visible.
+    ///
+    /// Ambit has no Dock icon, so double clicking it did nothing at all: no window, no
+    /// bounce, no response. The app was running correctly and looked broken, which is worse
+    /// than crashing, because a crash at least tells you what happened.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        MainActor.assumeIsolated {
+            NSApp.activate(ignoringOtherApps: true)
+            if let existing = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain }) {
+                existing.makeKeyAndOrderFront(nil)
+            } else {
+                WindowOpener.openMain?()
+            }
+            Diagnostics.log("reopened by the user")
+        }
+        return true
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         // Closes the open block, so a clean quit is distinguishable from a crash when the
         // log is read back. Quitting from the Dock, from a restart, or with the keyboard
@@ -91,13 +109,7 @@ struct AmbitApp: App {
         MenuBarExtra {
             MenuBarView(controller: controller)
         } label: {
-            // A gauge rather than a clock face. The app is about the shape of a day, and a
-            // clock in a menu bar simply reads as the time.
-            Image(
-                systemName: controller.isPaused
-                    ? "gauge.with.dots.needle.0percent"
-                    : "gauge.with.dots.needle.33percent"
-            )
+            MenuBarLabel(isPaused: controller.isPaused)
         }
         .menuBarExtraStyle(.window)
 
@@ -138,4 +150,35 @@ private struct NullEventStore: EventStore {
     func eventCount() throws -> Int { 0 }
     func earliestEventDate() throws -> Date? { nil }
     @discardableResult func deleteEvents(before cutoff: Date) throws -> Int { 0 }
+}
+
+
+/// The menu bar item's icon.
+///
+/// A view rather than a bare `Image` so it can hold `openWindow`. The label is the one part
+/// of a `MenuBarExtra` that is always on screen, which makes it the only reliable place to
+/// capture a scene opening action for the app delegate to use later.
+private struct MenuBarLabel: View {
+    let isPaused: Bool
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        // A gauge rather than a clock face. The app is about the shape of a day, and a clock
+        // in a menu bar simply reads as the time.
+        Image(
+            systemName: isPaused
+                ? "gauge.with.dots.needle.0percent"
+                : "gauge.with.dots.needle.33percent"
+        )
+        .accessibilityLabel(isPaused ? "Ambit, paused" : "Ambit, recording")
+        .task {
+            WindowOpener.openMain = { openWindow(id: AmbitWindow.main) }
+        }
+    }
+}
+
+/// Lets the app delegate open a SwiftUI scene, which it otherwise cannot do.
+@MainActor
+enum WindowOpener {
+    static var openMain: (() -> Void)?
 }
