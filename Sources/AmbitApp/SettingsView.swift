@@ -456,8 +456,36 @@ private struct ExclusionRow: View {
 private struct GeneralPane: View {
     @ObservedObject var store: SettingsStore
 
+    @State private var launchAtLogin = LaunchAtLogin.isEnabled
+    @State private var launchFailed = false
+
     var body: some View {
         Form {
+            Section {
+                Toggle("Start Ambit when I log in", isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) { _, wanted in
+                        guard !LaunchAtLogin.setEnabled(wanted) else { return }
+                        // Put the switch back where reality is rather than leaving it
+                        // showing something that did not happen.
+                        launchFailed = true
+                        launchAtLogin = LaunchAtLogin.isEnabled
+                    }
+
+                if LaunchAtLogin.wasDeniedBySystem {
+                    Text("Turned off in System Settings, General, Login Items. It has to be switched back on there.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if launchFailed {
+                    Text("macOS refused. This usually means Ambit is running from somewhere other than the Applications folder.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("A tracker you have to remember to start is one that misses days.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section {
                 Picker("Count me away after", selection: $store.settings.idleThreshold) {
                     Text("1 minute").tag(TimeInterval(60))

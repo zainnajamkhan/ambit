@@ -172,6 +172,15 @@ final class CaptureController: ObservableObject {
         return Timeline.blocks(from: events, upTo: min(week.end, Date()))
     }
 
+    /// Rules worth offering for the unsorted time in a given set of blocks.
+    ///
+    /// Filtered to a minute, because a suggestion covering nine seconds is noise and burying
+    /// the useful ones under it is how a good idea becomes an ignored list.
+    func sortSuggestions(for entries: [ClassifiedBlock]) -> [SuggestedRule] {
+        RuleSuggestion.suggestions(forUnclassified: Summary.unclassifiedTargets(entries))
+            .filter { $0.coverage >= 60 }
+    }
+
     /// A filename that says what is in the file and sorts correctly in a folder.
     func exportFilename(forWeek: Bool, extension ext: String) -> String {
         let formatter = DateFormatter()

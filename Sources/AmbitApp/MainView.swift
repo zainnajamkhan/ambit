@@ -17,6 +17,7 @@ struct MainView: View {
     @ObservedObject var controller: CaptureController
     @State private var period: Period = .day
     @State private var exportFailure: String?
+    @State private var sorting = false
 
     enum Period: String, CaseIterable, Identifiable {
         case day = "Day"
@@ -42,6 +43,16 @@ struct MainView: View {
             }
 
             ToolbarItem(placement: .primaryAction) {
+                Button {
+                    sorting = true
+                } label: {
+                    Label("Sort", systemImage: "tray.full")
+                }
+                .help("Turn unsorted time into a project")
+                .badge(suggestions.count)
+            }
+
+            ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button("Export Day as CSV…") { export(.csv, forWeek: false) }
                     Button("Export Day as JSON…") { export(.json, forWeek: false) }
@@ -53,11 +64,27 @@ struct MainView: View {
                 }
             }
         }
+        .sheet(isPresented: $sorting) {
+            SortActivitySheet(
+                settings: AmbitServices.shared.settings,
+                suggestions: suggestions
+            ) {
+                sorting = false
+            }
+        }
         .alert("Ambit could not write that file", isPresented: .constant(exportFailure != nil)) {
             Button("OK") { exportFailure = nil }
         } message: {
             Text(exportFailure ?? "")
         }
+    }
+
+    /// Suggestions for whichever period is on screen, so the button always means what the
+    /// user is currently looking at.
+    private var suggestions: [SuggestedRule] {
+        controller.sortSuggestions(
+            for: period == .week ? controller.weekClassifiedBlocks() : controller.classifiedBlocks
+        )
     }
 
     private enum Kind { case csv, json }
