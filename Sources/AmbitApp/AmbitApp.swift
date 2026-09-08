@@ -54,6 +54,24 @@ final class AmbitServices {
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Refuse to be the second copy.
+        //
+        // Two instances both watch the frontmost application and both append what they see
+        // to the same database, so every switch is recorded twice and every total is wrong.
+        // It is not a hypothetical: a build running from Xcode and an installed copy were
+        // found running together on this machine, and they wrote the same `stopped` event
+        // at the same instant.
+        //
+        // This runs before anything else, and exits rather than terminating, because
+        // terminating would run `applicationWillTerminate`, which closes the open block and
+        // would have this doomed copy write to the log on its way out. Nothing has been
+        // started yet, so there is nothing to shut down.
+        if let existing = Self.alreadyRunningInstance() {
+            Diagnostics.log("another copy is already running (pid \(existing.processIdentifier)); exiting")
+            existing.activate(options: [])
+            exit(0)
+        }
+
         MainActor.assumeIsolated {
             AmbitServices.shared.controller.start()
         }
@@ -64,6 +82,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // records them, which is precisely the impression this product cannot afford.
         guard !UserDefaults.standard.bool(forKey: OnboardingWindow.completedKey) else { return }
         MainActor.assumeIsolated { OnboardingWindow.present() }
+    }
+
+    /// Another copy of Ambit, if one is already running.
+    ///
+    /// Matched on bundle identifier rather than on the path, deliberately. The copy running
+    /// from Xcode and the copy in Applications live at different paths and are the same
+    /// application as far as the user, and the database, are concerned.
+    private static func alreadyRunningInstance() -> NSRunningApplication? {
+        guard let identifier = Bundle.main.bundleIdentifier else { return nil }
+        let mine = ProcessInfo.processInfo.processIdentifier
+        return NSRunningApplication
+            .runningApplications(withBundleIdentifier: identifier)
+            .first { $0.processIdentifier != mine && !$0.isTerminated }
     }
 
     /// Opening the app when it is already running has to do something visible.
