@@ -9,7 +9,7 @@
 import Foundation
 
 /// One reason not to record something.
-public struct ExclusionRule: Codable, Equatable, Sendable {
+public struct ExclusionRule: Codable, Equatable, Sendable, Identifiable {
 
     public enum Match: Codable, Equatable, Sendable {
         /// An exact bundle identifier. The precise way to name an application.
@@ -25,8 +25,37 @@ public struct ExclusionRule: Codable, Equatable, Sendable {
 
     public let match: Match
 
-    public init(_ match: Match) {
+    /// Identity for the interface, not for the rule.
+    ///
+    /// A list needs to know which row is which, and the row's own contents cannot say: two
+    /// exclusions can be identical while they are being typed, and the position in the list
+    /// changes meaning the moment anything above it is deleted.
+    public let id: UUID
+
+    public init(_ match: Match, id: UUID = UUID()) {
         self.match = match
+        self.id = id
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case match, id
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        match = try container.decode(Match.self, forKey: .match)
+        // Settings written before exclusions had identity carry no id, and a file the user
+        // is invited to hand edit may never have one. A fresh id is the right answer in both
+        // cases, because nothing outside this process refers to it.
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+    }
+
+    /// Equality is about what the rule does, deliberately ignoring ``id``.
+    ///
+    /// Identity is an interface concern. Two policies describing the same exclusions are the
+    /// same policy, and settings that saved and reloaded should not compare as changed.
+    public static func == (lhs: ExclusionRule, rhs: ExclusionRule) -> Bool {
+        lhs.match == rhs.match
     }
 
     func matches(_ target: FocusTarget) -> Bool {

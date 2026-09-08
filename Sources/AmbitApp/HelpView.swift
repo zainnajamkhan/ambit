@@ -51,13 +51,13 @@ struct HelpView: View {
             .navigationSplitViewColumnWidth(min: 190, ideal: 210, max: 240)
         } detail: {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: Space.large) {
                     Text(topic.rawValue)
                         .font(.title2.weight(.semibold))
                     content
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(24)
+                .padding(Space.page)
             }
         }
         .frame(width: 760, height: 520)
@@ -79,7 +79,7 @@ struct HelpView: View {
     // MARK: - Topics
 
     private var whatItDoes: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.large) {
             Paragraph("Ambit writes down what you worked on, without being told. You never press start and there is no timer to forget.")
             Paragraph("It notices which application is in front of you and what its window is called, and keeps a record of when that changed. That record is the raw material. On its own it is not very interesting, which is the honest answer to why a fresh install looks thin.")
             Rule()
@@ -90,7 +90,7 @@ struct HelpView: View {
     }
 
     private var reading: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.large) {
             Heading("The number at the top")
             Paragraph("Time you were actually at the machine and working. Time you were away is counted separately and named underneath, so the day adds up rather than appearing to have holes in it.")
 
@@ -112,7 +112,7 @@ struct HelpView: View {
     }
 
     private var sorting: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.large) {
             Paragraph("A project is whatever you want to see time against: a client, a side project, admin.")
             Paragraph("A rule decides what belongs to it. Rules match on the application, on words in a window title, or on a web address.")
 
@@ -132,7 +132,7 @@ struct HelpView: View {
     }
 
     private var correcting: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.large) {
             Paragraph("Right click any block in the day view. You can send it to a project, mark it as not work, or hand it back to the rules.")
             Paragraph("A correction only touches that one block. Everything else stays under whichever rule governs it.")
 
@@ -144,7 +144,7 @@ struct HelpView: View {
     }
 
     private var privacy: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.large) {
             Paragraph("Everything Ambit records stays on this Mac. Not as a promise, as a property of the app: it ships with no network permission at all, so macOS refuses to let it open a connection whatever the code does.")
             Paragraph("You can check that yourself rather than take it on trust:")
             Code("codesign -d --entitlements - /Applications/Ambit.app")
@@ -163,7 +163,7 @@ struct HelpView: View {
     }
 
     private var exporting: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.large) {
             Paragraph("Export from the toolbar, as CSV for a spreadsheet or JSON for anything else. A day or a week.")
             Paragraph("Nothing is held back and nothing is abridged. Away time is exported too, so the day adds up in the spreadsheet the same way it does on screen.")
             Paragraph("Ambit does not do invoicing on purpose. Your accounting tool is better at it than a time tracker would be.")
@@ -171,7 +171,7 @@ struct HelpView: View {
     }
 
     private var symbols: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.large) {
             Legend(symbol: "hand.point.up.left.fill", title: "Set by you", detail: "You assigned this block by hand. No rule will change it.")
             Legend(symbol: "circle.fill", title: "A colour", detail: "The project a block belongs to. Grey means unsorted, or that you were away.")
             Legend(symbol: "chevron.right", title: "Brief switches", detail: "A folded run of very short blocks. Click to open it.")
@@ -186,7 +186,7 @@ struct HelpView: View {
 private struct Heading: View {
     let text: String
     init(_ text: String) { self.text = text }
-    var body: some View { Text(text).font(.headline) }
+    var body: some View { Text(text).font(Type.heading) }
 }
 
 private struct Paragraph: View {
@@ -194,7 +194,7 @@ private struct Paragraph: View {
     init(_ text: String) { self.text = text }
     var body: some View {
         Text(text)
-            .font(.body)
+            .font(Type.body)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -207,14 +207,14 @@ private struct Code: View {
         Text(text)
             .font(.system(.callout, design: .monospaced))
             .textSelection(.enabled)
-            .padding(10)
+            .padding(Space.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: 6).fill(Color.secondary.opacity(0.10)))
     }
 }
 
 private struct Rule: View {
-    var body: some View { Divider().padding(.vertical, 2) }
+    var body: some View { Divider().padding(.vertical, Space.hair) }
 }
 
 private struct Legend: View {
@@ -223,14 +223,14 @@ private struct Legend: View {
     let detail: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: Space.medium) {
             Image(systemName: symbol)
                 .frame(width: 22)
                 .foregroundStyle(.tint)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
+            VStack(alignment: .leading, spacing: Space.hair) {
+                Text(title).font(Type.heading)
                 Text(detail)
-                    .font(.subheadline)
+                    .font(Type.detail)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

@@ -44,15 +44,15 @@ struct SortActivitySheet: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Space.tight) {
             Text("Sort your time")
-                .font(.headline)
+                .font(Type.heading)
             Text("Pick something Ambit has recorded but does not have a rule for. Whatever you choose applies to time already recorded, not only from now on.")
-                .font(.caption)
+                .font(Type.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(16)
+        .padding(Space.large)
     }
 
     private var list: some View {
@@ -70,12 +70,12 @@ struct SortActivitySheet: View {
                                 .lineLimit(1)
                             Spacer(minLength: 8)
                             Text(Format.duration(suggestion.coverage))
-                                .font(.callout)
+                                .font(Type.detail)
                                 .monospacedDigit()
                                 .foregroundStyle(.secondary)
                         }
-                        .padding(.vertical, 7)
-                        .padding(.horizontal, 16)
+                        .padding(.vertical, Space.small)
+                        .padding(.horizontal, Space.large)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -95,7 +95,7 @@ struct SortActivitySheet: View {
     }
 
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Space.medium) {
             if chosen != nil {
                 Picker("File it under", selection: $destination) {
                     Text("A new project").tag(Destination.newProject)
@@ -124,7 +124,7 @@ struct SortActivitySheet: View {
                     .disabled(!canApply)
             }
         }
-        .padding(16)
+        .padding(Space.large)
     }
 
     private var canApply: Bool {

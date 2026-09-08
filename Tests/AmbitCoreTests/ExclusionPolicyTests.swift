@@ -176,3 +176,66 @@ struct ExclusionPolicyTests {
         #expect(try JSONDecoder().decode(ExclusionPolicy.self, from: data) == policy)
     }
 }
+
+@Suite("Exclusion identity")
+struct ExclusionIdentityTests {
+
+    @Test("a settings file written before rules had an id still loads")
+    func decodesWithoutAnID() throws {
+        // Exactly the shape the app has already written to disk on this machine.
+        let json = Data("""
+        {"rules":[{"match":{"bundleIdentifier":{"_0":"com.1password.1password"}}}]}
+        """.utf8)
+
+        let policy = try JSONDecoder().decode(ExclusionPolicy.self, from: json)
+        #expect(policy.rules.count == 1)
+        #expect(policy.rules[0].match == .bundleIdentifier("com.1password.1password"))
+    }
+
+    @Test("every rule loaded without an id still gets a distinct one")
+    func inventedIdentitiesAreDistinct() throws {
+        let json = Data("""
+        {"rules":[{"match":{"titleContains":{"_0":""}}},{"match":{"titleContains":{"_0":""}}}]}
+        """.utf8)
+
+        let policy = try JSONDecoder().decode(ExclusionPolicy.self, from: json)
+        // Two rules that are identical in every other way. Without distinct identities a
+        // list cannot tell them apart, which is the whole reason the id exists.
+        #expect(policy.rules[0].id != policy.rules[1].id)
+    }
+
+    @Test("an id survives a round trip through the settings file")
+    func identitySurvivesSaving() throws {
+        let original = ExclusionPolicy(rules: [.init(.titleContains("Braxton"))])
+        let reloaded = try JSONDecoder().decode(
+            ExclusionPolicy.self,
+            from: try JSONEncoder().encode(original)
+        )
+        #expect(reloaded.rules[0].id == original.rules[0].id)
+    }
+
+    @Test("equality is about what a rule does, not which row it is")
+    func equalityIgnoresIdentity() {
+        // Settings that saved and reloaded must not compare as changed, or the store would
+        // write the file again on every launch.
+        #expect(ExclusionRule(.titleContains("Braxton")) == ExclusionRule(.titleContains("Braxton")))
+        #expect(ExclusionRule(.titleContains("Braxton")) != ExclusionRule(.titleContains("Northwind")))
+    }
+
+    @Test("an exclusion with no value excludes nothing")
+    func emptyValueIsInert() {
+        let policy = ExclusionPolicy(rules: [
+            .init(.titleContains("")),
+            .init(.applicationName("")),
+        ])
+        let target = FocusTarget(
+            bundleIdentifier: "com.example.editor",
+            applicationName: "Editor",
+            windowTitle: "Northwind proposal"
+        )
+        // Adding a row in the Private pane starts it empty. If empty matched everything, the
+        // act of clicking plus would stop Ambit recording anything identifying at all.
+        #expect(!policy.excludes(target))
+        #expect(policy.redacting(target) == target)
+    }
+}

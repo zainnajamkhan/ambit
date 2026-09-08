@@ -71,19 +71,37 @@ private struct ProjectsPane: View {
                 } label: {
                     Image(systemName: "plus")
                 }
+                .help("Add a project")
+                .accessibilityLabel("Add a project")
+
                 Button {
                     remove()
                 } label: {
                     Image(systemName: "minus")
                 }
                 .disabled(selection == nil)
+                .help("Delete the selected project")
+                .accessibilityLabel("Delete the selected project")
+
                 Spacer()
-                Text("Deleting a project leaves its rules in place, pointing at nothing.")
-                    .font(.caption)
+                Text(deletionWarning)
+                    .font(Type.caption)
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.borderless)
-            .padding(8)
+            .padding(Space.small)
+        }
+    }
+
+    /// What deleting the selected project would cost, said before it is done rather than
+    /// discovered afterwards in the rules pane.
+    private var deletionWarning: String {
+        guard let selection else { return "Rules point at a project. Deleting one leaves them to repoint." }
+        let orphaned = store.settings.rules.rules.filter { $0.projectID == selection }.count
+        switch orphaned {
+        case 0: return "No rules point at this one."
+        case 1: return "One rule points at this. It will need repointing."
+        default: return "\(orphaned) rules point at this. They will need repointing."
         }
     }
 
@@ -110,7 +128,7 @@ private struct ProjectRow: View {
     var body: some View {
         if let index = store.settings.rules.projects.firstIndex(where: { $0.id == projectID }) {
             let binding = $store.settings.rules.projects[index]
-            HStack(spacing: 10) {
+            HStack(spacing: Space.medium) {
                 Picker("", selection: binding.colorName) {
                     ForEach(ProjectPalette.all, id: \.self) { name in
                         Circle()
@@ -127,9 +145,9 @@ private struct ProjectRow: View {
 
                 Toggle("Billable", isOn: binding.isBillable)
                     .toggleStyle(.checkbox)
-                    .font(.caption)
+                    .font(Type.caption)
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, Space.hair)
         }
     }
 }
@@ -146,10 +164,10 @@ private struct RulesPane: View {
     var body: some View {
         VStack(spacing: 0) {
             Text("Rules are checked from the top down and the first one that matches wins. Put the specific ones above the general ones.")
-                .font(.caption)
+                .font(Type.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(10)
+                .padding(Space.medium)
 
             Divider()
 
@@ -183,6 +201,8 @@ private struct RulesPane: View {
                     Image(systemName: "plus")
                 }
                 .disabled(projects.isEmpty)
+                .help(projects.isEmpty ? "Add a project first" : "Add a rule")
+                .accessibilityLabel("Add a rule")
 
                 Button {
                     remove()
@@ -190,14 +210,16 @@ private struct RulesPane: View {
                     Image(systemName: "minus")
                 }
                 .disabled(selection == nil)
+                .help("Delete the selected rule")
+                .accessibilityLabel("Delete the selected rule")
 
                 Spacer()
                 Text("Drag to reorder.")
-                    .font(.caption)
+                    .font(Type.caption)
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.borderless)
-            .padding(8)
+            .padding(Space.small)
         }
     }
 
@@ -233,7 +255,7 @@ private struct RuleRow: View {
             let binding = $store.settings.rules.rules[index]
             let rule = store.settings.rules.rules[index]
 
-            HStack(spacing: 8) {
+            HStack(spacing: Space.small) {
                 Picker("", selection: kindBinding(binding)) {
                     ForEach(Kind.allCases) { Text($0.rawValue).tag($0) }
                 }
@@ -243,17 +265,36 @@ private struct RuleRow: View {
                 TextField("value", text: valueBinding(binding))
                     .textFieldStyle(.roundedBorder)
 
-                Image(systemName: "arrow.right")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                // A rule with nothing to look for matches nothing. That is the right
+                // behaviour, but silently doing nothing is not: a new rule starts empty, so
+                // without this the first thing a rule ever does is appear broken.
+                if currentValue(rule.match).trimmingCharacters(in: .whitespaces).isEmpty {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(Type.caption)
+                        .foregroundStyle(.orange)
+                        .help("This rule has nothing to match, so it does nothing yet.")
+                        .accessibilityLabel("This rule has no value and does nothing yet")
+                } else {
+                    Image(systemName: "arrow.right")
+                        .font(Type.caption)
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
 
                 Picker("", selection: binding.projectID) {
+                    // A rule can outlive the project it points at. Without an entry for the
+                    // missing one the picker matches no tag, renders blank, and cannot be
+                    // repointed at anything: the only repair left was deleting the rule.
+                    if store.settings.rules.project(id: rule.projectID) == nil {
+                        Text("Missing project").tag(rule.projectID)
+                    }
                     ForEach(store.settings.rules.projects) { project in
                         Text(project.name).tag(project.id)
                     }
                 }
                 .labelsHidden()
                 .frame(width: 130)
+                .accessibilityLabel("Project this rule feeds")
 
                 // Three states, not two: inherit the project's setting, force billable, or
                 // force not. The middle option is the default and the common case.
@@ -266,7 +307,7 @@ private struct RuleRow: View {
                 .frame(width: 110)
                 .help(rule.isBillable == nil ? "Follows the project" : "Overrides the project")
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, Space.hair)
         }
     }
 
@@ -335,22 +376,22 @@ private struct RuleRow: View {
 
 private struct ExclusionsPane: View {
     @ObservedObject var store: SettingsStore
-    @State private var selection: Int?
+    @State private var selection: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
             Text("Anything matching these is recorded as time but nothing else. No application name, no window title, no address. The lock screen, the screen saver and the password panel are always excluded and are not listed here.")
-                .font(.caption)
+                .font(Type.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(10)
+                .padding(Space.medium)
 
             Divider()
 
             List(selection: $selection) {
-                ForEach(Array(store.settings.exclusions.rules.enumerated()), id: \.offset) { index, _ in
-                    ExclusionRow(store: store, index: index).tag(index)
+                ForEach(store.settings.exclusions.rules) { rule in
+                    ExclusionRow(store: store, ruleID: rule.id).tag(rule.id)
                 }
             }
             .listStyle(.inset)
@@ -371,26 +412,39 @@ private struct ExclusionsPane: View {
                 } label: {
                     Image(systemName: "plus")
                 }
+                .help("Add an exclusion")
+                .accessibilityLabel("Add an exclusion")
+
                 Button {
-                    if let selection, store.settings.exclusions.rules.indices.contains(selection) {
-                        store.settings.exclusions.rules.remove(at: selection)
-                        self.selection = nil
-                    }
+                    store.settings.exclusions.rules.removeAll { $0.id == selection }
+                    selection = nil
                 } label: {
                     Image(systemName: "minus")
                 }
                 .disabled(selection == nil)
+                .help("Delete the selected exclusion")
+                .accessibilityLabel("Delete the selected exclusion")
+
                 Spacer()
+                Text("An exclusion with no value does nothing.")
+                    .font(Type.caption)
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.borderless)
-            .padding(8)
+            .padding(Space.small)
         }
     }
 }
 
 private struct ExclusionRow: View {
     @ObservedObject var store: SettingsStore
-    let index: Int
+    let ruleID: UUID
+
+    /// Where this rule currently sits. Looked up rather than passed in, because the position
+    /// changes whenever anything above it is deleted.
+    private var index: Int? {
+        store.settings.exclusions.rules.firstIndex { $0.id == ruleID }
+    }
 
     private enum Kind: String, CaseIterable, Identifiable {
         case application = "Application is"
@@ -400,43 +454,65 @@ private struct ExclusionRow: View {
     }
 
     var body: some View {
-        if store.settings.exclusions.rules.indices.contains(index) {
-            HStack(spacing: 8) {
+        if index != nil {
+            HStack(spacing: Space.small) {
                 Picker("", selection: kind) {
                     ForEach(Kind.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .labelsHidden()
                 .frame(width: 140)
+                .accessibilityLabel("What this exclusion looks at")
 
                 TextField("value", text: value)
                     .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel("Value to exclude")
+
+                if currentValue.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(Type.caption)
+                        .foregroundStyle(.orange)
+                        .help("Nothing to match, so this excludes nothing yet.")
+                        .accessibilityLabel("This exclusion has no value and does nothing yet")
+                }
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, Space.hair)
         }
+    }
+
+    /// Replaces the rule while keeping its identity, so editing a row does not make the list
+    /// believe the row was deleted and a different one put in its place.
+    private func replace(_ match: ExclusionRule.Match) {
+        guard let index else { return }
+        store.settings.exclusions.rules[index] = ExclusionRule(match, id: ruleID)
     }
 
     private var kind: Binding<Kind> {
         Binding(
             get: {
-                switch store.settings.exclusions.rules[index].match {
+                switch currentMatch {
                 case .bundleIdentifier: .application
                 case .applicationName: .name
                 case .titleContains: .title
                 }
             },
-            set: { store.settings.exclusions.rules[index] = .init(make($0, currentValue)) }
+            set: { replace(make($0, currentValue)) }
         )
     }
 
     private var value: Binding<String> {
         Binding(
             get: { currentValue },
-            set: { store.settings.exclusions.rules[index] = .init(make(kind.wrappedValue, $0)) }
+            set: { replace(make(kind.wrappedValue, $0)) }
         )
     }
 
+    private var currentMatch: ExclusionRule.Match {
+        guard let index else { return .titleContains("") }
+        return store.settings.exclusions.rules[index].match
+    }
+
     private var currentValue: String {
-        switch store.settings.exclusions.rules[index].match {
+        switch currentMatch {
         case .bundleIdentifier(let value), .applicationName(let value), .titleContains(let value):
             value
         }
@@ -473,15 +549,15 @@ private struct GeneralPane: View {
 
                 if LaunchAtLogin.wasDeniedBySystem {
                     Text("Turned off in System Settings, General, Login Items. It has to be switched back on there.")
-                        .font(.caption)
+                        .font(Type.caption)
                         .foregroundStyle(.secondary)
                 } else if launchFailed {
                     Text("macOS refused. This usually means Ambit is running from somewhere other than the Applications folder.")
-                        .font(.caption)
+                        .font(Type.caption)
                         .foregroundStyle(.secondary)
                 } else {
                     Text("A tracker you have to remember to start is one that misses days.")
-                        .font(.caption)
+                        .font(Type.caption)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -494,18 +570,18 @@ private struct GeneralPane: View {
                     Text("10 minutes").tag(TimeInterval(600))
                 }
                 Text("Takes effect the next time Ambit starts.")
-                    .font(.caption)
+                    .font(Type.caption)
                     .foregroundStyle(.secondary)
             }
 
             Section("Your data") {
                 LabeledContent("Database") {
                     Text("~/Library/Application Support/Ambit")
-                        .font(.caption)
+                        .font(Type.caption)
                         .textSelection(.enabled)
                 }
                 Text("Ambit ships with no network permission at all. It cannot send this anywhere, whatever the code does, because the operating system will not let it open a connection.")
-                    .font(.caption)
+                    .font(Type.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

@@ -42,7 +42,7 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(36)
+                .padding(Space.page)
 
             Divider()
             footer
@@ -65,7 +65,7 @@ struct OnboardingView: View {
         HStack {
             // Progress as dots rather than "Step 2 of 4". The count is not information the
             // user needs; the sense of nearly being done is.
-            HStack(spacing: 6) {
+            HStack(spacing: Space.small) {
                 ForEach(Step.allCases, id: \.rawValue) { candidate in
                     Circle()
                         .fill(candidate == step ? Color.accentColor : Color.secondary.opacity(0.3))
@@ -90,7 +90,7 @@ struct OnboardingView: View {
             }
             .keyboardShortcut(.defaultAction)
         }
-        .padding(16)
+        .padding(Space.large)
     }
 }
 
@@ -98,22 +98,22 @@ struct OnboardingView: View {
 
 private struct WelcomeStep: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.section) {
+            VStack(alignment: .leading, spacing: Space.small) {
                 Text("Ambit")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(Type.heading)
                     .foregroundStyle(.tint)
                 Text("Where did the day go?")
-                    .font(.system(size: 30, weight: .medium, design: .rounded))
-                Text("Ambit answers that without being asked, and without anything leaving your Mac.")
-                    .font(.title3)
+                    .font(Type.figure)
+                Text("It answers that on its own, and nothing leaves your Mac.")
+                    .font(Type.lead)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer()
 
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Space.large) {
                 Point(
                     symbol: "hand.raised.slash",
                     title: "You never press start",
@@ -122,7 +122,7 @@ private struct WelcomeStep: View {
                 Point(
                     symbol: "lock.shield",
                     title: "It cannot phone home",
-                    detail: "No network permission at all. macOS enforces it, not us."
+                    detail: "No network permission. macOS enforces that, not Ambit."
                 )
                 Point(
                     symbol: "arrow.uturn.backward",
@@ -142,15 +142,15 @@ private struct Point: View {
     let detail: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: Space.medium) {
             Image(systemName: symbol)
-                .font(.title3)
+                .font(Type.lead)
                 .foregroundStyle(.tint)
                 .frame(width: 26)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
+            VStack(alignment: .leading, spacing: Space.hair) {
+                Text(title).font(Type.heading)
                 Text(detail)
-                    .font(.subheadline)
+                    .font(Type.detail)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -166,21 +166,21 @@ private struct PermissionStep: View {
     private var granted: Bool { controller.health == .observing }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.section) {
+            VStack(alignment: .leading, spacing: Space.small) {
                 Text("One permission")
-                    .font(.system(size: 24, weight: .medium, design: .rounded))
+                    .font(Type.title)
                 Text("Without it: \"Xcode, 90 minutes\".\nWith it: which client those 90 minutes were for.")
-                    .font(.title3)
+                    .font(Type.lead)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: Space.medium) {
                 Image(systemName: granted ? "checkmark.circle.fill" : "circle.dashed")
                     .foregroundStyle(granted ? .green : .secondary)
-                Text(granted ? "Granted. Ambit is reading titles." : "Not granted yet.")
-                    .font(.callout)
+                Text(granted ? "Granted. Ambit can read window titles." : "Not granted yet.")
+                    .font(Type.detail)
 
                 if !granted {
                     // Both routes, because the system prompt appears at most once per
@@ -190,31 +190,31 @@ private struct PermissionStep: View {
                         .controlSize(.small)
                 }
             }
-            .padding(12)
+            .padding(Space.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.08)))
 
             // The live preview. The plan calls for this and it is the honest move: rather
             // than promising what is captured, show it, updating as the user switches
             // windows behind this one.
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Space.small) {
                 Text("What Ambit can see right now")
-                    .font(.caption)
+                    .font(Type.caption)
                     .foregroundStyle(.secondary)
 
                 if let target = controller.currentTarget {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(target.applicationName).font(.callout.weight(.medium))
+                    VStack(alignment: .leading, spacing: Space.hair) {
+                        Text(target.applicationName).font(Type.detail.weight(.medium))
                         Text(target.windowTitle ?? "no window title, because the permission is missing")
-                            .font(.caption)
+                            .font(Type.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
                     }
                 } else {
-                    Text("Nothing yet.").font(.callout).foregroundStyle(.secondary)
+                    Text("Nothing yet.").font(Type.detail).foregroundStyle(.secondary)
                 }
             }
-            .padding(12)
+            .padding(Space.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.2)))
 
@@ -227,24 +227,24 @@ private struct PermissionStep: View {
 
 private struct PrivacyStep: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.section) {
+            VStack(alignment: .leading, spacing: Space.small) {
                 Text("Window titles say a lot")
-                    .font(.system(size: 24, weight: .medium, design: .rounded))
-                Text("One title can name a client, a contract, or a diagnosis. Every other automatic tracker uploads exactly that. Ambit cannot, and you can check rather than trust:")
-                    .font(.title3)
+                    .font(Type.title)
+                Text("One title can name a client, a contract, or a diagnosis. Other trackers upload that. Ambit has no permission to, and you can check:")
+                    .font(Type.lead)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             Text("codesign -d --entitlements - /Applications/Ambit.app")
-                .font(.system(.caption, design: .monospaced))
+                .font(Type.mono)
                 .textSelection(.enabled)
-                .padding(10)
+                .padding(Space.medium)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 6).fill(Color.secondary.opacity(0.08)))
 
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: Space.large) {
                 Point(
                     symbol: "eye.slash",
                     title: "Add your own exclusions",
@@ -282,7 +282,7 @@ private struct FirstProjectStep: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Space.large) {
             if created {
                 confirmation
             } else if suggestions.isEmpty {
@@ -295,12 +295,12 @@ private struct FirstProjectStep: View {
     }
 
     private var chooser: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.large) {
+            VStack(alignment: .leading, spacing: Space.small) {
                 Text("This is your actual day")
-                    .font(.system(size: 24, weight: .medium, design: .rounded))
+                    .font(Type.title)
                 Text("Pick one. It sorts what is already recorded, not just what comes next.")
-                    .font(.title3)
+                    .font(Type.lead)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -317,12 +317,12 @@ private struct FirstProjectStep: View {
                             Text(suggestion.summary)
                             Spacer()
                             Text(Format.duration(suggestion.coverage))
-                                .font(.callout)
+                                .font(Type.detail)
                                 .monospacedDigit()
                                 .foregroundStyle(.secondary)
                         }
-                        .padding(.vertical, 7)
-                        .padding(.horizontal, 10)
+                        .padding(.vertical, Space.small)
+                        .padding(.horizontal, Space.medium)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -343,28 +343,28 @@ private struct FirstProjectStep: View {
     }
 
     private var notYet: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Space.medium) {
             Text("Nothing to sort yet")
-                .font(.system(size: 24, weight: .medium, design: .rounded))
-            Text("Ambit has not watched long enough to have anything worth naming. Carry on working; it is already recording. Come back through **Sort** in the toolbar and it will offer suggestions from your real day.")
-                .font(.title3)
+                .font(Type.title)
+            Text("Ambit is recording, it just has not seen enough yet. Come back to Sort in the toolbar once you have worked a while.")
+                .font(Type.lead)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     private var confirmation: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Space.medium) {
             Label("Sorted", systemImage: "checkmark.circle.fill")
-                .font(.title3.weight(.medium))
+                .font(Type.lead.weight(.medium))
                 .foregroundStyle(.green)
 
-            Text("\(Format.duration(chosen?.coverage ?? 0)) of today is now \(projectName) — including the part recorded before you made the rule.")
-                .font(.title3)
+            Text("\(Format.duration(chosen?.coverage ?? 0)) of today is now \(projectName), including the time recorded before you wrote the rule.")
+                .font(Type.lead)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("That is the whole idea. Decide afterwards, not in advance.")
-                .font(.title3)
+            Text("Decide afterwards, not in advance.")
+                .font(Type.lead)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

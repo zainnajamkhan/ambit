@@ -22,45 +22,45 @@ struct MenuBarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             current
-            Divider().padding(.vertical, 8)
+            Divider().padding(.vertical, Space.small)
             today
             if controller.health != .observing {
-                Divider().padding(.vertical, 8)
+                Divider().padding(.vertical, Space.small)
                 permissionNotice
             }
-            Divider().padding(.vertical, 8)
+            Divider().padding(.vertical, Space.small)
             actions
         }
-        .padding(12)
+        .padding(Space.medium)
         .frame(width: 280)
     }
 
     // MARK: - Now
 
     private var current: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Space.tight) {
             Text(controller.isPaused ? "Paused" : "Now")
-                .font(.caption)
+                .font(Type.caption)
                 .foregroundStyle(.secondary)
 
             if controller.isPaused {
                 Text("Not recording")
-                    .font(.body)
+                    .font(Type.body)
                     .foregroundStyle(.secondary)
             } else if let target = controller.currentTarget {
                 Text(target.applicationName)
-                    .font(.body.weight(.medium))
+                    .font(Type.body.weight(.medium))
                     .lineLimit(1)
                 if let title = target.windowTitle {
                     Text(title)
-                        .font(.caption)
+                        .font(Type.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
             } else {
                 Text("Nothing yet")
-                    .font(.body)
+                    .font(Type.body)
                     .foregroundStyle(.secondary)
             }
         }
@@ -70,31 +70,31 @@ struct MenuBarView: View {
 
     private var today: some View {
         let summary = controller.summary
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: Space.small) {
             HStack {
-                Text("Today").font(.caption).foregroundStyle(.secondary)
+                Text("Today").font(Type.caption).foregroundStyle(.secondary)
                 Spacer()
                 Text(Format.duration(summary.worked))
-                    .font(.caption.weight(.medium))
+                    .font(Type.caption.weight(.medium))
                     .monospacedDigit()
             }
 
             if summary.byProject.isEmpty {
                 Text("Nothing sorted yet")
-                    .font(.caption)
+                    .font(Type.caption)
                     .foregroundStyle(.tertiary)
             } else {
                 ForEach(summary.byProject.prefix(4)) { total in
-                    HStack(spacing: 8) {
+                    HStack(spacing: Space.small) {
                         Circle()
                             .fill(ProjectColor.resolve(total.project.colorName))
                             .frame(width: 7, height: 7)
                         Text(total.project.name)
-                            .font(.callout)
+                            .font(Type.detail)
                             .lineLimit(1)
                         Spacer(minLength: 8)
                         Text(Format.duration(total.total))
-                            .font(.callout)
+                            .font(Type.detail)
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
                     }
@@ -106,13 +106,13 @@ struct MenuBarView: View {
     // MARK: - Permission
 
     private var permissionNotice: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.small) {
             Label(noticeTitle, systemImage: "exclamationmark.triangle.fill")
-                .font(.caption.weight(.medium))
+                .font(Type.caption.weight(.medium))
                 .foregroundStyle(.orange)
 
             Text(noticeDetail)
-                .font(.caption)
+                .font(Type.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -142,7 +142,7 @@ struct MenuBarView: View {
     // MARK: - Actions
 
     private var actions: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: Space.hair) {
             MenuRow(
                 title: controller.isPaused ? "Resume Recording" : "Pause Recording",
                 symbol: controller.isPaused ? "play.fill" : "pause.fill"
@@ -194,15 +194,15 @@ struct MenuRowLabel: View {
     @State private var isHovering = false
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.small) {
             Image(systemName: symbol)
                 .frame(width: 16)
                 .foregroundStyle(.secondary)
             Text(title)
             Spacer()
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 5)
+        .padding(.horizontal, Space.small)
+        .padding(.vertical, Space.tight)
         .contentShape(Rectangle())
         .background(
             RoundedRectangle(cornerRadius: 5)

@@ -55,6 +55,7 @@ struct DayView: View {
                 Text(Format.duration(summary.worked))
                     .font(Type.figure)
                     .monospacedDigit()
+                    .contentTransition(.numericText())
                 Text(subtitle)
                     .font(Type.detail)
                     .foregroundStyle(.secondary)
@@ -64,6 +65,7 @@ struct DayView: View {
         }
         .padding(Space.section)
         .headerSurface()
+        .gentleAnimation(summary.worked)
     }
 
     private var subtitle: String {
@@ -76,14 +78,21 @@ struct DayView: View {
     }
 
     private var dayNavigation: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Space.tight) {
             Button { controller.step(days: -1) } label: { Image(systemName: "chevron.left") }
                 .help("Previous day")
+                .accessibilityLabel("Previous day")
+                .keyboardShortcut("[", modifiers: .command)
+
             Button { controller.showToday() } label: { Text("Today") }
                 .disabled(controller.isShowingToday)
+                .keyboardShortcut("t", modifiers: .command)
+
             Button { controller.step(days: 1) } label: { Image(systemName: "chevron.right") }
                 .disabled(controller.isShowingToday)
                 .help("Next day")
+                .accessibilityLabel("Next day")
+                .keyboardShortcut("]", modifiers: .command)
         }
         .buttonStyle(.accessoryBar)
     }
@@ -122,19 +131,21 @@ struct DayView: View {
             Spacer()
 
             if filter.isNarrowed {
-                Button("Clear") {
-                    filter = TimelineFilter(collapseShorterThan: filter.collapseShorterThan)
-                }
-                .buttonStyle(.accessoryBar)
+                Button("Clear", action: clearFilter)
+                    .buttonStyle(.accessoryBar)
+                    .help("Show everything again")
             }
 
-            Text("\(rows.count) of \(entries.count)")
-                .font(Type.caption)
-                .monospacedDigit()
-                .foregroundStyle(.tertiary)
-                .help("Rows shown of blocks recorded")
+            if rows.count != entries.count {
+                Text("\(rows.count) of \(entries.count) shown")
+                    .font(Type.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.tertiary)
+                    .help("Short runs are folded together, and the filter hides the rest")
+            }
         }
         .controlSize(.small)
+        .gentleAnimation(rows.count)
         .padding(.horizontal, Space.section)
         .padding(.vertical, Space.small)
         .background(Color.ambitCanvas)
@@ -151,6 +162,11 @@ struct DayView: View {
             return only.name
         }
         return "\(ids.count) projects"
+    }
+
+    private func clearFilter() {
+        // The fold setting is not a filter, so clearing does not reset it.
+        filter = TimelineFilter(collapseShorterThan: filter.collapseShorterThan)
     }
 
     private func toggle(_ project: Project) {
@@ -171,17 +187,18 @@ struct DayView: View {
             )
         } else if entries.isEmpty {
             Message(
-                title: controller.isShowingToday ? "No activity yet" : "No activity",
+                title: controller.isShowingToday ? "Nothing yet today" : "Nothing recorded",
                 detail: controller.isShowingToday
                     ? "Keep working. This fills in on its own."
-                    : "Ambit wasn't running.",
+                    : "Ambit recorded nothing on this day.",
                 symbol: "clock"
             )
         } else if rows.isEmpty {
             Message(
-                title: "No matches",
-                detail: "Clear the filter to see everything.",
-                symbol: "line.3.horizontal.decrease.circle"
+                title: "Nothing matches the filter",
+                detail: "There is time on this day, it is just all filtered out.",
+                symbol: "line.3.horizontal.decrease.circle",
+                action: ("Clear the filter", { clearFilter() })
             )
         } else {
             List(rows) { row in
@@ -235,13 +252,15 @@ struct DayView: View {
 private struct BlockRow: View {
     let entry: ClassifiedBlock
 
+    @State private var isHovering = false
+
     private var block: Block { entry.block }
     private var isWork: Bool { block.state == .active }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: Space.medium) {
             Text(Format.time(block.start))
-                .font(.callout)
+                .font(Type.detail)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
                 .frame(width: 52, alignment: .leading)
@@ -251,16 +270,16 @@ private struct BlockRow: View {
                 .frame(width: 3, height: 26)
                 .opacity(isWork ? 1 : 0.4)
 
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 5) {
+            VStack(alignment: .leading, spacing: Space.hair) {
+                HStack(spacing: Space.tight) {
                     Text(Format.describe(block))
-                        .font(.body)
+                        .font(Type.body)
                         .foregroundStyle(isWork ? .primary : .secondary)
                         .lineLimit(1)
 
                     if entry.classification?.source == .manual {
                         Image(systemName: "hand.point.up.left.fill")
-                            .font(.caption2)
+                            .font(Type.micro)
                             .foregroundStyle(.tertiary)
                             .help("Set by you. Rules won't change it.")
                     }
@@ -268,7 +287,7 @@ private struct BlockRow: View {
 
                 if let detail = Format.detail(block) {
                     Text(detail)
-                        .font(.caption)
+                        .font(Type.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
@@ -279,26 +298,45 @@ private struct BlockRow: View {
 
             if let project = entry.classification?.project {
                 Text(project.name)
-                    .font(.caption.weight(.medium))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
+                    .font(Type.caption.weight(.medium))
+                    .padding(.horizontal, Space.small)
+                    .padding(.vertical, Space.hair)
                     .background(
                         Capsule().fill(ProjectColor.resolve(project.colorName).opacity(0.16))
                     )
             } else if entry.isUnclassified {
                 Text("Unsorted")
-                    .font(.caption)
+                    .font(Type.caption)
                     .foregroundStyle(.tertiary)
             }
 
             Text(Format.duration(block.duration))
-                .font(.callout)
+                .font(Type.detail)
                 .monospacedDigit()
                 .foregroundStyle(isWork ? .primary : .secondary)
                 .frame(width: 62, alignment: .trailing)
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, Space.tight)
+        .padding(.horizontal, Space.tight)
+        .background(
+            RoundedRectangle(cornerRadius: 5)
+                .fill(isHovering ? Color.ambitWell : .clear)
+        )
+        .onHover { isHovering = $0 }
+        .gentleAnimation(isHovering)
         .accessibilityElement(children: .combine)
+        .accessibilityLabel(spokenLabel)
+    }
+
+    /// Read out as a sentence rather than as five fragments in whatever order they were laid
+    /// out in, which is what combining the children alone produces.
+    private var spokenLabel: String {
+        var parts = [Format.time(block.start), Format.describe(block)]
+        if let detail = Format.detail(block) { parts.append(detail) }
+        if let project = entry.classification?.project { parts.append(project.name) }
+        else if entry.isUnclassified { parts.append("unsorted") }
+        parts.append(Format.duration(block.duration))
+        return parts.joined(separator: ", ")
     }
 
     private var accent: Color {
@@ -316,70 +354,85 @@ private struct BlockRow: View {
 private struct CollapsedRow: View {
     let run: CollapsedRun
     @State private var isExpanded = false
+    @State private var isHovering = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
                 isExpanded.toggle()
             } label: {
-                HStack(spacing: 12) {
+                HStack(spacing: Space.medium) {
                     Text(Format.time(run.start))
-                        .font(.callout)
+                        .font(Type.detail)
                         .monospacedDigit()
                         .foregroundStyle(.tertiary)
                         .frame(width: 52, alignment: .leading)
 
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.caption2)
+                        .font(Type.micro)
                         .foregroundStyle(.tertiary)
                         .frame(width: 8)
 
                     Text("\(run.count) quick switches")
-                        .font(.body)
+                        .font(Type.body)
                         .foregroundStyle(.secondary)
 
                     Text(run.applications.prefix(3).joined(separator: ", "))
-                        .font(.caption)
+                        .font(Type.caption)
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
 
                     Spacer(minLength: 8)
 
                     Text(Format.duration(run.duration))
-                        .font(.callout)
+                        .font(Type.detail)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                         .frame(width: 62, alignment: .trailing)
                 }
-                .padding(.vertical, 3)
+                .padding(.vertical, Space.tight)
+                .padding(.horizontal, Space.tight)
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(isHovering ? Color.ambitWell : .clear)
+                )
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .onHover { isHovering = $0 }
+            .accessibilityLabel(
+                "\(run.count) quick switches from \(Format.time(run.start)), "
+                + "\(Format.duration(run.duration)) in total"
+            )
+            .accessibilityHint(isExpanded ? "Collapses the list" : "Expands the list")
 
             if isExpanded {
-                ForEach(Array(run.entries.enumerated()), id: \.offset) { _, entry in
-                    HStack(spacing: 12) {
+                // Keyed by the moment each block began, which is unique and stable. An
+                // index changes meaning the instant the run does.
+                ForEach(run.entries, id: \.block.start) { entry in
+                    HStack(spacing: Space.medium) {
                         Text(Format.time(entry.block.start))
-                            .font(.caption)
+                            .font(Type.caption)
                             .monospacedDigit()
                             .foregroundStyle(.tertiary)
                             .frame(width: 52, alignment: .leading)
                         Text(Format.describe(entry.block))
-                            .font(.caption)
+                            .font(Type.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Spacer(minLength: 8)
                         Text(Format.duration(entry.block.duration))
-                            .font(.caption)
+                            .font(Type.caption)
                             .monospacedDigit()
                             .foregroundStyle(.tertiary)
                     }
-                    .padding(.leading, 24)
-                    .padding(.vertical, 1)
+                    .padding(.leading, Space.page)
+                    .padding(.vertical, Space.hair)
                 }
-                .padding(.bottom, 4)
+                .padding(.bottom, Space.tight)
             }
         }
+        .gentleAnimation(isExpanded)
     }
 }
 
@@ -389,18 +442,39 @@ struct Message: View {
     let detail: String
     let symbol: String
 
+    /// An empty state that was caused by something the user did should offer to undo it.
+    var action: (title: String, perform: () -> Void)?
+
+    init(
+        title: String,
+        detail: String,
+        symbol: String,
+        action: (title: String, perform: () -> Void)? = nil
+    ) {
+        self.title = title
+        self.detail = detail
+        self.symbol = symbol
+        self.action = action
+    }
+
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Space.small) {
             Image(systemName: symbol)
-                .font(.largeTitle)
+                .font(Type.figure)
                 .foregroundStyle(.tertiary)
-            Text(title).font(.headline)
+                .accessibilityHidden(true)
+            Text(title).font(Type.heading)
             Text(detail)
-                .font(.subheadline)
+                .font(Type.detail)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+            if let action {
+                Button(action.title, action: action.perform)
+                    .padding(.top, Space.tight)
+            }
         }
-        .padding(40)
+        .padding(Space.page)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
     }
 }

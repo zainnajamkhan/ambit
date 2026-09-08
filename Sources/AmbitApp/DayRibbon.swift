@@ -37,7 +37,7 @@ struct DayRibbon: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.small) {
             caption
 
             if let bounds {
@@ -72,7 +72,7 @@ struct DayRibbon: View {
                     .frame(height: 34)
                     .overlay {
                         Text("No activity")
-                            .font(.caption)
+                            .font(Type.caption)
                             .foregroundStyle(.tertiary)
                     }
             }
@@ -84,7 +84,7 @@ struct DayRibbon: View {
     // MARK: - Caption
 
     private var caption: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Space.small) {
             if let hovering {
                 Circle()
                     .fill(colour(for: hovering))
@@ -134,14 +134,16 @@ struct DayRibbon: View {
             context.fill(Path(rect), with: .color(colour(for: entry)))
         }
 
-        // Hour ticks over the top, so the shape can be read against the clock.
+        // Hour ticks over the top, so the shape can be read against the clock. Drawn in
+        // the foreground colour rather than in black: black on a dark ribbon in dark
+        // mode is a tick mark nobody can see.
         var tick = Calendar.current.dateInterval(of: .hour, for: start)?.end ?? start
         while tick < end {
             let x = size.width * (tick.timeIntervalSince(start) / span)
             var line = Path()
             line.move(to: CGPoint(x: x, y: 0))
             line.addLine(to: CGPoint(x: x, y: size.height))
-            context.stroke(line, with: .color(.black.opacity(0.18)), lineWidth: 0.5)
+            context.stroke(line, with: .color(.primary.opacity(0.16)), lineWidth: 0.5)
             tick = tick.addingTimeInterval(3_600)
         }
     }
@@ -176,7 +178,7 @@ struct DayRibbon: View {
             Spacer(minLength: 0)
             Text(Format.time(end))
         }
-        .font(.caption2)
+        .font(Type.micro)
         .monospacedDigit()
         .foregroundStyle(.tertiary)
     }

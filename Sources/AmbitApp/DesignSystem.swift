@@ -37,6 +37,10 @@ enum Type {
     static let body = Font.body
     static let detail = Font.callout
     static let caption = Font.caption
+    /// Scale marks and other labels that are read only when looked for.
+    static let micro = Font.caption2
+    /// The sentence under a heading, in the onboarding and the help.
+    static let lead = Font.title3
     /// Anything the user could sensibly copy out.
     static let mono = Font.system(.callout, design: .monospaced)
 }
