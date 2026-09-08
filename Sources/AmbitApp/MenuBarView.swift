@@ -150,8 +150,8 @@ struct MenuBarView: View {
                 controller.togglePause()
             }
 
-            MenuRow(title: "How Ambit Works", symbol: "questionmark.circle") {
-                OnboardingWindow.present()
+            MenuRow(title: "Ambit Help", symbol: "questionmark.circle") {
+                HelpWindow.present()
             }
 
             MenuRow(title: "Open Ambit", symbol: "calendar.day.timeline.left") {

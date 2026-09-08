@@ -17,7 +17,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		00000000000000000000000F /* AmbitApp */ = {isa = PBXFileSystemSynchronizedRootGroup; path = "Sources/AmbitApp"; sourceTree = "<group>"; };
+		00000000000000000000000F /* Sources/AmbitApp */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sources/AmbitApp;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,7 +41,7 @@
 		000000000000000000000004 = {
 			isa = PBXGroup;
 			children = (
-				00000000000000000000000F /* AmbitApp */,
+				00000000000000000000000F /* Sources/AmbitApp */,
 				000000000000000000000005 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -66,7 +70,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				00000000000000000000000F /* AmbitApp */,
+				00000000000000000000000F /* Sources/AmbitApp */,
 			);
 			name = Ambit;
 			packageProductDependencies = (
@@ -178,13 +182,13 @@
 		00000000000000000000000A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "App/Ambit.entitlements";
+				CODE_SIGN_ENTITLEMENTS = App/Ambit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "App/Info.plist";
+				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -200,13 +204,13 @@
 		00000000000000000000000B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "App/Ambit.entitlements";
+				CODE_SIGN_ENTITLEMENTS = App/Ambit.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "App/Info.plist";
+				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

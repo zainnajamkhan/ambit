@@ -19,6 +19,10 @@ struct MainView: View {
     @State private var exportFailure: String?
     @State private var sorting = false
 
+    /// Lives here rather than in the day view so that it survives switching to the week and
+    /// back, which is what someone narrowing down a week's work would expect.
+    @State private var filter = TimelineFilter.default
+
     enum Period: String, CaseIterable, Identifiable {
         case day = "Day"
         case week = "Week"
@@ -28,7 +32,7 @@ struct MainView: View {
     var body: some View {
         Group {
             switch period {
-            case .day: DayView(controller: controller)
+            case .day: DayView(controller: controller, filter: $filter)
             case .week: WeekView(controller: controller)
             }
         }
@@ -40,6 +44,13 @@ struct MainView: View {
                 }
                 .pickerStyle(.segmented)
                 .fixedSize()
+            }
+
+            ToolbarItem(placement: .primaryAction) {
+                Button { HelpWindow.present() } label: {
+                    Label("Help", systemImage: "questionmark.circle")
+                }
+                .help("What everything here means")
             }
 
             ToolbarItem(placement: .primaryAction) {
