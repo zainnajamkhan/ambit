@@ -33,7 +33,11 @@ struct MainView: View {
         Group {
             switch period {
             case .day: DayView(controller: controller, filter: $filter)
-            case .week: WeekView(controller: controller)
+            case .week:
+                WeekView(controller: controller) { day in
+                    controller.selectedDay = day
+                    period = .day
+                }
             }
         }
         .frame(minWidth: 460, idealWidth: 560, minHeight: 420, idealHeight: 620)
@@ -44,6 +48,7 @@ struct MainView: View {
                 }
                 .pickerStyle(.segmented)
                 .fixedSize()
+                .accessibilityLabel("Show a day or a week")
             }
 
             ToolbarItem(placement: .primaryAction) {
@@ -51,16 +56,22 @@ struct MainView: View {
                     Label("Help", systemImage: "questionmark.circle")
                 }
                 .help("What everything here means")
+                .accessibilityLabel("Help")
+                .keyboardShortcut("/", modifiers: .command)
             }
 
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     sorting = true
                 } label: {
-                    Label("Sort", systemImage: "tray.full")
+                    // The count is on the label rather than in a badge. `badge` is for list
+                    // rows and tab items; on a toolbar button it renders nothing at all, so
+                    // the one number that says there is something worth doing was invisible.
+                    Label(sortTitle, systemImage: "tray.full")
                 }
                 .help("Turn unsorted time into a project")
-                .badge(suggestions.count)
+                .accessibilityLabel(sortTitle)
+                .keyboardShortcut("s", modifiers: [.command, .shift])
             }
 
             ToolbarItem(placement: .primaryAction) {
@@ -73,6 +84,7 @@ struct MainView: View {
                 } label: {
                     Label("Export", systemImage: "square.and.arrow.up")
                 }
+                .accessibilityLabel("Export")
             }
         }
         .sheet(isPresented: $sorting) {
@@ -88,6 +100,12 @@ struct MainView: View {
         } message: {
             Text(exportFailure ?? "")
         }
+    }
+
+    /// "Sort", or "Sort (3)" when there is something worth sorting.
+    private var sortTitle: String {
+        let count = suggestions.count
+        return count > 0 ? "Sort (\(count))" : "Sort"
     }
 
     /// Suggestions for whichever period is on screen, so the button always means what the

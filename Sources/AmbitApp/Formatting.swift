@@ -55,6 +55,53 @@ enum Format {
         return dayHeading.string(from: date)
     }
 
+    private static let dayAndMonth: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("dMMMM")
+        return formatter
+    }()
+
+    private static let dayOnly: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("d")
+        return formatter
+    }()
+
+    /// "This week", or the dates it covers.
+    static func week(_ interval: DateInterval) -> String {
+        let calendar = Calendar.current
+        if interval.contains(calendar.startOfDay(for: Date())) { return "This week" }
+
+        let last = calendar.date(byAdding: .day, value: -1, to: interval.end) ?? interval.end
+        // Within one month the month is said once: "9 to 15 March", not "9 March to 15 March".
+        if calendar.isDate(interval.start, equalTo: last, toGranularity: .month) {
+            return "\(dayOnly.string(from: interval.start)) to \(dayAndMonth.string(from: last))"
+        }
+        return "\(dayAndMonth.string(from: interval.start)) to \(dayAndMonth.string(from: last))"
+    }
+
+    private static let weekdayInitials: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("EEEEE")
+        return formatter
+    }()
+
+    /// One letter, for the column chart. "M", "T", "W".
+    static func weekdayInitial(_ date: Date) -> String {
+        weekdayInitials.string(from: date)
+    }
+
+    private static let weekdayAndDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("EEEd")
+        return formatter
+    }()
+
+    /// "Mon 9". What a column is called out loud, and in its tooltip.
+    static func shortDay(_ date: Date) -> String {
+        weekdayAndDate.string(from: date)
+    }
+
     /// What a block is called in the timeline.
     static func describe(_ block: Block) -> String {
         switch block.state {

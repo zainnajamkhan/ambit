@@ -28,6 +28,21 @@ public struct ProjectTotal: Equatable, Sendable, Identifiable {
     public var total: TimeInterval { billable + nonBillable }
 }
 
+/// How much work landed on one day. The week view's column chart.
+public struct DayTotal: Equatable, Sendable, Identifiable {
+    public let day: Date
+    public let worked: TimeInterval
+    public let billable: TimeInterval
+
+    public var id: Date { day }
+
+    public init(day: Date, worked: TimeInterval, billable: TimeInterval) {
+        self.day = day
+        self.worked = worked
+        self.billable = billable
+    }
+}
+
 /// Everything the day and week views need, computed in one pass.
 public struct PeriodSummary: Equatable, Sendable {
     public let byProject: [ProjectTotal]
@@ -166,6 +181,47 @@ public enum Summary {
             locked: locked,
             paused: paused
         )
+    }
+
+    /// One entry per day of a period, in order, including the days with nothing in them.
+    ///
+    /// Empty days are kept deliberately. A week is read by its shape, and a Wednesday that
+    /// was a day off says something; leaving it out slides Thursday into its place and turns
+    /// a week with a gap in it into a week that merely looks busy.
+    ///
+    /// Exact rather than approximate, because blocks are cut at midnight before they get
+    /// here, so no block has to be shared between two days.
+    public static func byDay(
+        _ classified: [ClassifiedBlock],
+        in interval: DateInterval,
+        calendar: Calendar = .current
+    ) -> [DayTotal] {
+        var worked: [Date: TimeInterval] = [:]
+        var billable: [Date: TimeInterval] = [:]
+
+        for entry in classified where entry.block.state == .active {
+            let day = calendar.startOfDay(for: entry.block.start)
+            worked[day, default: 0] += entry.block.duration
+            if entry.classification?.isBillable == true {
+                billable[day, default: 0] += entry.block.duration
+            }
+        }
+
+        var days: [DayTotal] = []
+        var cursor = calendar.startOfDay(for: interval.start)
+
+        while cursor < interval.end {
+            days.append(
+                DayTotal(day: cursor, worked: worked[cursor] ?? 0, billable: billable[cursor] ?? 0)
+            )
+            // A calendar that will not advance would spin here forever.
+            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor), next > cursor else {
+                break
+            }
+            cursor = next
+        }
+
+        return days
     }
 
     /// The applications and windows that matched no rule, longest first.

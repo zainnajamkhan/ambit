@@ -24,6 +24,16 @@ final class CaptureController: ObservableObject {
 
     @Published private(set) var blocks: [Block] = []
     @Published private(set) var corrections: [Date: AssignmentCorrection] = [:]
+
+    /// The day, classified. Stored rather than computed on demand.
+    ///
+    /// A SwiftUI `body` runs far more often than the data behind it changes: on every hover,
+    /// every window resize, every unrelated published value. The day view reads this four
+    /// separate times while drawing once, and a real day is several hundred blocks, so
+    /// computing it in the view meant classifying the whole day several times a frame for an
+    /// answer that had not changed since the last event arrived.
+    @Published private(set) var classifiedBlocks: [ClassifiedBlock] = []
+    @Published private(set) var summary: PeriodSummary = Summary.summarise([])
     @Published private(set) var health: FocusWatcher.Health = .awaitingPermission
     @Published private(set) var isPaused = false
     @Published private(set) var currentTarget: FocusTarget?
@@ -56,7 +66,10 @@ final class CaptureController: ObservableObject {
         settings.$settings
             .sink { [weak self] latest in
                 self?.watcher.exclusions = latest.exclusions.includingBuiltIn()
-                self?.reload()
+                // Only the classification changes. Editing a rule does not alter a single
+                // event, so re-reading the log would be a query per keystroke for an answer
+                // already in memory.
+                self?.reclassify()
             }
             .store(in: &cancellables)
     }
@@ -149,15 +162,27 @@ final class CaptureController: ObservableObject {
         Calendar.current.isDateInToday(selectedDay)
     }
 
+    func showThisWeek() {
+        selectedDay = Calendar.current.startOfDay(for: Date())
+    }
+
+    func stepWeeks(_ weeks: Int) {
+        let calendar = Calendar.current
+        guard let moved = calendar.date(byAdding: .weekOfYear, value: weeks, to: selectedDay) else {
+            return
+        }
+        // Never past today, for the same reason a day cannot be: there is nothing recorded
+        // in the future, and an empty screen with no explanation reads as a fault.
+        selectedDay = min(moved, calendar.startOfDay(for: Date()))
+    }
+
+    var isShowingThisWeek: Bool {
+        let calendar = Calendar.current
+        guard let shown = selectedWeek else { return true }
+        return shown.contains(calendar.startOfDay(for: Date()))
+    }
+
     // MARK: - Derived views of the log
-
-    var summary: PeriodSummary {
-        Summary.summarise(classifiedBlocks)
-    }
-
-    var classifiedBlocks: [ClassifiedBlock] {
-        Summary.classify(blocks, with: settingsStore.settings.rules, corrections: corrections)
-    }
 
     /// Overrule the rules for one block.
     ///
@@ -167,21 +192,35 @@ final class CaptureController: ObservableObject {
         record(.assigned(AssignmentCorrection(blockStart: block.start, intent: intent)))
     }
 
-    /// The selected day's week, folded and classified. Used by the week view and by export.
-    func weekClassifiedBlocks() -> [ClassifiedBlock] {
-        Summary.classify(
-            weekBlocks(),
-            with: settingsStore.settings.rules,
-            corrections: (try? Timeline.corrections(from: store.assignments())) ?? [:]
-        )
+    /// The week the selected day falls in, or nil if the calendar cannot say.
+    var selectedWeek: DateInterval? {
+        Calendar.current.dateInterval(of: .weekOfYear, for: selectedDay)
     }
 
-    private func weekBlocks() -> [Block] {
-        guard let week = Calendar.current.dateInterval(of: .weekOfYear, for: selectedDay) else {
-            return blocks
+    /// The selected day's week, folded and classified. Used by the week view and by export.
+    ///
+    /// Cached against a stamp that moves whenever an event lands or a rule changes, because
+    /// this reads the database and folds seven days, and the week view asks for it every
+    /// time it draws.
+    func weekClassifiedBlocks() -> [ClassifiedBlock] {
+        guard let week = selectedWeek else { return classifiedBlocks }
+        if let cached = weekCache, cached.week == week, cached.stamp == stamp {
+            return cached.value
         }
-        return (try? foldedBlocks(in: week)) ?? []
+
+        let value = Summary.classify(
+            (try? foldedBlocks(in: week)) ?? [],
+            with: settingsStore.settings.rules,
+            corrections: corrections
+        )
+        weekCache = (week, stamp, value)
+        return value
     }
+
+    private var weekCache: (week: DateInterval, stamp: Int, value: [ClassifiedBlock])?
+
+    /// Moves whenever anything the derived views depend on has changed.
+    private var stamp = 0
 
     /// Rules worth offering for the unsorted time in a given set of blocks.
     ///
@@ -242,6 +281,18 @@ final class CaptureController: ObservableObject {
         } catch {
             storeFailure = error.localizedDescription
         }
+        reclassify()
+    }
+
+    /// Applies the rules to what has already been read, without touching the database.
+    private func reclassify() {
+        stamp &+= 1
+        classifiedBlocks = Summary.classify(
+            blocks,
+            with: settingsStore.settings.rules,
+            corrections: corrections
+        )
+        summary = Summary.summarise(classifiedBlocks)
     }
 
     /// How far back to look for the state a window opens in.
