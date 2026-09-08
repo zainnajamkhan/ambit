@@ -156,15 +156,20 @@ struct MenuBarView: View {
                 NSApp.activate(ignoringOtherApps: true)
             }
 
-            MenuRow(title: "Settings…", symbol: "gearshape") {
-                // With no Dock icon and no application menu, this is the only route in.
-                if #available(macOS 14, *) {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                } else {
-                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-                }
-                NSApp.activate(ignoringOtherApps: true)
+            // SettingsLink rather than sending a `showSettingsWindow:` selector by hand.
+            // That selector is an unofficial name that has moved between releases, and it
+            // silently does nothing when it is wrong, which is exactly how this button
+            // behaved. SettingsLink is the supported route and cannot go stale.
+            //
+            // The activation is still needed: with no Dock icon the app is an accessory,
+            // so a window it opens can appear behind whatever the user was looking at.
+            SettingsLink {
+                MenuRowLabel(title: "Settings…", symbol: "gearshape")
             }
+            .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture().onEnded {
+                NSApp.activate(ignoringOtherApps: true)
+            })
 
             MenuRow(title: "Quit Ambit", symbol: "power") {
                 controller.stop()
@@ -174,32 +179,44 @@ struct MenuBarView: View {
     }
 }
 
-/// A row that behaves like a menu item: full width hit area, highlight on hover.
+/// The look of a menu item: full width hit area, highlight on hover.
+///
+/// Split out from the button so that `SettingsLink`, which insists on providing its own
+/// button, can wear the same clothes as the rows around it.
+struct MenuRowLabel: View {
+    let title: String
+    let symbol: String
+
+    @State private var isHovering = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: symbol)
+                .frame(width: 16)
+                .foregroundStyle(.secondary)
+            Text(title)
+            Spacer()
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 5)
+        .contentShape(Rectangle())
+        .background(
+            RoundedRectangle(cornerRadius: 5)
+                .fill(isHovering ? Color.primary.opacity(0.08) : .clear)
+        )
+        .onHover { isHovering = $0 }
+    }
+}
+
 private struct MenuRow: View {
     let title: String
     let symbol: String
     let action: () -> Void
 
-    @State private var isHovering = false
-
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: symbol)
-                    .frame(width: 16)
-                    .foregroundStyle(.secondary)
-                Text(title)
-                Spacer()
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 5)
-            .contentShape(Rectangle())
-            .background(
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(isHovering ? Color.primary.opacity(0.08) : .clear)
-            )
+            MenuRowLabel(title: title, symbol: symbol)
         }
         .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
     }
 }
