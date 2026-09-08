@@ -12,3 +12,7 @@ Spikes/out/
 *.xcodeproj/project.xcworkspace/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
+
+# Generated icon intermediates. Resources/AppIcon.icns IS committed.
+build/Ambit.iconset/
+build/AmbitIcon-1024.png

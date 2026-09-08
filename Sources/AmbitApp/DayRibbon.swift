@@ -71,7 +71,7 @@ struct DayRibbon: View {
                     .fill(Color.secondary.opacity(0.08))
                     .frame(height: 34)
                     .overlay {
-                        Text("Nothing recorded")
+                        Text("No activity")
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
@@ -105,12 +105,13 @@ struct DayRibbon: View {
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             } else {
-                Text("Your day, to scale. Point at it to read a moment.")
-                    .foregroundStyle(.tertiary)
+                // Deliberately blank. The row keeps its height so the layout does not jump,
+                // but a permanent instruction telling people to hover is clutter they only
+                // need once.
                 Spacer(minLength: 0)
             }
         }
-        .font(.caption)
+        .font(Type.caption)
         // A fixed height so the layout does not jump as the pointer moves across.
         .frame(height: 14)
     }

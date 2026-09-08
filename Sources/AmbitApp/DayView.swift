@@ -31,38 +31,39 @@ struct DayView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider()
             filterBar
             Divider()
             content
+                .background(Color.ambitSurface)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.ambitCanvas)
     }
 
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.large) {
             HStack(alignment: .firstTextBaseline) {
                 Text(Format.day(controller.selectedDay))
-                    .font(.title3.weight(.semibold))
+                    .font(Type.title)
                 Spacer()
                 dayNavigation
             }
 
             // One number, large. The rest is context for it rather than a competitor to it.
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: Space.hair) {
                 Text(Format.duration(summary.worked))
-                    .font(.system(size: 34, weight: .medium, design: .rounded))
+                    .font(Type.figure)
                     .monospacedDigit()
                 Text(subtitle)
-                    .font(.callout)
+                    .font(Type.detail)
                     .foregroundStyle(.secondary)
             }
 
             DayRibbon(entries: entries, day: controller.selectedDay)
         }
-        .padding(20)
+        .padding(Space.section)
+        .headerSurface()
     }
 
     private var subtitle: String {
@@ -90,7 +91,7 @@ struct DayView: View {
     // MARK: - Filtering
 
     private var filterBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.small) {
             Menu {
                 Button("All projects") { filter.projectIDs = nil }
                 if !projects.isEmpty {
@@ -112,11 +113,11 @@ struct DayView: View {
 
             Toggle("Unsorted only", isOn: $filter.onlyUnsorted)
                 .toggleStyle(.button)
-                .help("Show only work that no rule has claimed yet")
+                .help("Only work without a project")
 
             Toggle("Away time", isOn: $filter.includesAwayTime)
                 .toggleStyle(.button)
-                .help("Include time you were idle or the screen was locked")
+                .help("Include idle and locked time")
 
             Spacer()
 
@@ -128,14 +129,15 @@ struct DayView: View {
             }
 
             Text("\(rows.count) of \(entries.count)")
-                .font(.caption)
+                .font(Type.caption)
                 .monospacedDigit()
                 .foregroundStyle(.tertiary)
-                .help("Rows shown, out of blocks recorded. Brief switches are folded together.")
+                .help("Rows shown of blocks recorded")
         }
         .controlSize(.small)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 8)
+        .padding(.horizontal, Space.section)
+        .padding(.vertical, Space.small)
+        .background(Color.ambitCanvas)
     }
 
     private func isSelected(_ project: Project) -> Bool {
@@ -163,22 +165,22 @@ struct DayView: View {
     private var content: some View {
         if let failure = controller.storeFailure {
             Message(
-                title: "Ambit could not read this day",
+                title: "Couldn't read this day",
                 detail: failure,
                 symbol: "exclamationmark.triangle"
             )
         } else if entries.isEmpty {
             Message(
-                title: controller.isShowingToday ? "Nothing recorded yet" : "Nothing recorded",
+                title: controller.isShowingToday ? "No activity yet" : "No activity",
                 detail: controller.isShowingToday
-                    ? "Ambit is watching. Carry on working and this fills in."
-                    : "Ambit was not running on this day.",
+                    ? "Keep working. This fills in on its own."
+                    : "Ambit wasn't running.",
                 symbol: "clock"
             )
         } else if rows.isEmpty {
             Message(
-                title: "Nothing matches this filter",
-                detail: "Clear the filter to see the rest of the day.",
+                title: "No matches",
+                detail: "Clear the filter to see everything.",
                 symbol: "line.3.horizontal.decrease.circle"
             )
         } else {
@@ -203,7 +205,7 @@ struct DayView: View {
         if entry.block.state == .active {
             let all = AmbitServices.shared.settings.settings.rules.projects
             if all.isEmpty {
-                Text("No projects yet")
+                Text("No projects")
             } else {
                 ForEach(all) { project in
                     Button {
@@ -220,10 +222,10 @@ struct DayView: View {
             Divider()
             Button("Not work") { controller.assign(entry.block, to: .notWork) }
             if entry.classification?.source == .manual {
-                Button("Let the rules decide") { controller.assign(entry.block, to: .followRules) }
+                Button("Use rules again") { controller.assign(entry.block, to: .followRules) }
             }
         } else {
-            Text("Away time cannot be assigned")
+            Text("Away time can't be assigned")
         }
     }
 }
@@ -260,7 +262,7 @@ private struct BlockRow: View {
                         Image(systemName: "hand.point.up.left.fill")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
-                            .help("You set this by hand. Rules will not change it.")
+                            .help("Set by you. Rules won't change it.")
                     }
                 }
 
@@ -332,7 +334,7 @@ private struct CollapsedRow: View {
                         .foregroundStyle(.tertiary)
                         .frame(width: 8)
 
-                    Text("\(run.count) brief switches")
+                    Text("\(run.count) quick switches")
                         .font(.body)
                         .foregroundStyle(.secondary)
 
@@ -390,7 +392,7 @@ struct Message: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: symbol)
-                .font(.system(size: 26, weight: .light))
+                .font(.largeTitle)
                 .foregroundStyle(.tertiary)
             Text(title).font(.headline)
             Text(detail)

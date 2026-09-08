@@ -44,7 +44,7 @@ struct MenuBarView: View {
                 .foregroundStyle(.secondary)
 
             if controller.isPaused {
-                Text("Nothing is being recorded")
+                Text("Not recording")
                     .font(.body)
                     .foregroundStyle(.secondary)
             } else if let target = controller.currentTarget {
@@ -59,7 +59,7 @@ struct MenuBarView: View {
                         .truncationMode(.middle)
                 }
             } else {
-                Text("Waiting for activity")
+                Text("Nothing yet")
                     .font(.body)
                     .foregroundStyle(.secondary)
             }
@@ -80,7 +80,7 @@ struct MenuBarView: View {
             }
 
             if summary.byProject.isEmpty {
-                Text("No work sorted into a project yet")
+                Text("Nothing sorted yet")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             } else {
@@ -121,7 +121,7 @@ struct MenuBarView: View {
             // does nothing is worse than no button.
             HStack {
                 Button("Open Settings") { AccessibilityAuthorization.openSystemSettings() }
-                Button("Ask Again") { AccessibilityAuthorization.request() }
+                Button("Ask again") { AccessibilityAuthorization.request() }
             }
             .controlSize(.small)
         }
@@ -129,14 +129,14 @@ struct MenuBarView: View {
 
     private var noticeTitle: String {
         controller.health == .permissionRevoked
-            ? "Accessibility was switched off"
-            : "Accessibility is needed"
+            ? "Accessibility turned off"
+            : "Accessibility needed"
     }
 
     private var noticeDetail: String {
         controller.health == .permissionRevoked
-            ? "Ambit is still recording which applications you use, but it can no longer see window titles."
-            : "Without it Ambit records which applications you use, but not what you were working on in them."
+            ? "Still recording apps. Window titles have stopped."
+            : "Ambit can see your apps, but not what you're working on in them."
     }
 
     // MARK: - Actions
