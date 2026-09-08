@@ -36,9 +36,22 @@ to test it on yourself during S1. Right now idle gaps are recorded silently. Pro
 more accurate and more annoying, and the honest answer comes from you running it for a
 fortnight, not from me picking.
 
-**What the free tier is.** The plan says $39 one time with a fourteen day trial. It does
-not say whether there is a permanently free tier, which the portfolio README says all three
-apps should have for App Store discovery. Those two documents disagree.
+**~~What the free tier is.~~ Settled 8 September 2026: there is a permanent free tier.**
+
+The line is **"where did my time go" is free, "which client do I bill" costs money.**
+
+- **Free, forever:** capture, the day timeline, where the day went by application, and
+  export. Genuinely useful on its own, builds the habit, and gives the App Store a free app
+  to rank.
+- **$39 once:** projects, rules, billable tracking, the week summary.
+
+Export stays free on both, because `02-tally.md` says "no paywall on your own data" and that
+principle is the same one as the no network claim. The wall is on the *organising*, never on
+the data.
+
+Not implemented yet. Licensing is S6 and needs `IndieKit` bringing over from Quiet. The
+onboarding is built so the paywall drops in at the last step, which is exactly where someone
+has just watched their own day sort itself and understands what they would be buying.
 
 **The app icon.** Nothing exists. Note from Quiet's knowledge base: the SF Symbols licence
 forbids using SF Symbols in an app icon, so it has to be drawn. The menu bar icon is a

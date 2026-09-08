@@ -13,7 +13,9 @@ import Foundation
 /// The URL cases are here before anything produces them. The Safari extension is a later
 /// slice, and having the shape settled now means the rules a user writes today keep working
 /// when it lands rather than needing a migration.
-public enum RuleMatch: Codable, Equatable, Sendable {
+// Hashable so suggestions can be grouped by what they would match. Declared here
+// rather than in an extension, because synthesis only works in the declaring file.
+public enum RuleMatch: Codable, Hashable, Sendable {
     case bundleIdentifier(String)
     case applicationName(String)
     case titleContains(String)

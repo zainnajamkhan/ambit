@@ -57,6 +57,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MainActor.assumeIsolated {
             AmbitServices.shared.controller.start()
         }
+        Diagnostics.log("launched, onboarded=\(UserDefaults.standard.bool(forKey: OnboardingWindow.completedKey))")
+
+        // Nobody discovers a menu bar icon they were not told about. On a first run the
+        // app has to come to the user once, or it is invisible software that quietly
+        // records them, which is precisely the impression this product cannot afford.
+        guard !UserDefaults.standard.bool(forKey: OnboardingWindow.completedKey) else { return }
+        MainActor.assumeIsolated { OnboardingWindow.present() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -66,6 +73,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MainActor.assumeIsolated {
             AmbitServices.shared.controller.stop()
         }
+        Diagnostics.log("quit")
+        Diagnostics.flush()
     }
 }
 

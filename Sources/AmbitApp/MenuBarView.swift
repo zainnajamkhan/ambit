@@ -150,6 +150,10 @@ struct MenuBarView: View {
                 controller.togglePause()
             }
 
+            MenuRow(title: "How Ambit Works", symbol: "questionmark.circle") {
+                OnboardingWindow.present()
+            }
+
             MenuRow(title: "Open Ambit", symbol: "calendar.day.timeline.left") {
                 controller.showToday()
                 openWindow(id: AmbitWindow.main)
