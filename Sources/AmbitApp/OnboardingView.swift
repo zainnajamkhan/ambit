@@ -42,7 +42,7 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(32)
+                .padding(36)
 
             Divider()
             footer
@@ -99,25 +99,35 @@ struct OnboardingView: View {
 private struct WelcomeStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Ambit writes down what you worked on, so you don't have to remember.")
-                .font(.title2.weight(.medium))
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Ambit")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.tint)
+                Text("Where did the day go?")
+                    .font(.system(size: 30, weight: .medium, design: .rounded))
+                Text("Ambit answers that without being asked, and without anything leaving your Mac.")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
-            VStack(alignment: .leading, spacing: 14) {
+            Spacer()
+
+            VStack(alignment: .leading, spacing: 16) {
                 Point(
                     symbol: "hand.raised.slash",
                     title: "You never press start",
-                    detail: "No timers to forget. It notices what is in front of you and keeps a record."
+                    detail: "No timer to forget."
                 )
                 Point(
                     symbol: "lock.shield",
-                    title: "Nothing leaves this Mac",
-                    detail: "Ambit ships with no network permission at all, so macOS refuses to let it open a connection, whatever the code does."
+                    title: "It cannot phone home",
+                    detail: "No network permission at all. macOS enforces it, not us."
                 )
                 Point(
                     symbol: "arrow.uturn.backward",
-                    title: "Corrections work backwards",
-                    detail: "Sort your work into projects whenever you like. A rule written in March also sorts January."
+                    title: "Sort it out afterwards",
+                    detail: "A rule written in March also sorts January."
                 )
             }
 
@@ -157,13 +167,14 @@ private struct PermissionStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Ambit needs Accessibility to read window titles.")
-                .font(.title3.weight(.medium))
-
-            Text("Without it you still get \"Xcode, 90 minutes\". With it you get which project, which document, which client, which is the part you can bill for.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("One permission")
+                    .font(.system(size: 24, weight: .medium, design: .rounded))
+                Text("Without it: \"Xcode, 90 minutes\".\nWith it: which client those 90 minutes were for.")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             HStack(spacing: 10) {
                 Image(systemName: granted ? "checkmark.circle.fill" : "circle.dashed")
@@ -217,13 +228,14 @@ private struct PermissionStep: View {
 private struct PrivacyStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Window titles say a lot about you.")
-                .font(.title3.weight(.medium))
-
-            Text("A single title can name a client, a document, a contract or a diagnosis. Every other automatic tracker uploads exactly that. Ambit cannot, and you can check for yourself:")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Window titles say a lot")
+                    .font(.system(size: 24, weight: .medium, design: .rounded))
+                Text("One title can name a client, a contract, or a diagnosis. Every other automatic tracker uploads exactly that. Ambit cannot, and you can check rather than trust:")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             Text("codesign -d --entitlements - /Applications/Ambit.app")
                 .font(.system(.caption, design: .monospaced))
@@ -235,13 +247,13 @@ private struct PrivacyStep: View {
             VStack(alignment: .leading, spacing: 14) {
                 Point(
                     symbol: "eye.slash",
-                    title: "Some things are never written down",
-                    detail: "The lock screen, the screen saver and the password panel are always excluded. Add your own in Settings: a password manager, or any window whose title mentions something private."
+                    title: "Add your own exclusions",
+                    detail: "A password manager, or any title mentioning something private. The lock screen and password panel are already excluded."
                 )
                 Point(
                     symbol: "camera.slash",
                     title: "No screenshots, ever",
-                    detail: "Some trackers photograph your screen. Ambit does not and will not."
+                    detail: "Some trackers photograph your screen. This one will not."
                 )
             }
 
@@ -284,13 +296,14 @@ private struct FirstProjectStep: View {
 
     private var chooser: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Here is what you have actually done today.")
-                .font(.title3.weight(.medium))
-
-            Text("Pick one and Ambit will sort it into a project. It applies to what is already recorded, not just from now on.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("This is your actual day")
+                    .font(.system(size: 24, weight: .medium, design: .rounded))
+                Text("Pick one. It sorts what is already recorded, not just what comes next.")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             VStack(spacing: 0) {
                 ForEach(suggestions) { suggestion in
@@ -331,15 +344,12 @@ private struct FirstProjectStep: View {
 
     private var notYet: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Nothing to sort yet.")
-                .font(.title3.weight(.medium))
-            Text("Ambit has not watched you for long enough to have anything worth naming. Carry on working and open it again later: the day view will show what you did, and offer to turn it into projects then.")
-                .font(.subheadline)
+            Text("Nothing to sort yet")
+                .font(.system(size: 24, weight: .medium, design: .rounded))
+            Text("Ambit has not watched long enough to have anything worth naming. Carry on working; it is already recording. Come back through **Sort** in the toolbar and it will offer suggestions from your real day.")
+                .font(.title3)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Nothing is lost in the meantime. It is recording already.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
         }
     }
 
@@ -349,12 +359,12 @@ private struct FirstProjectStep: View {
                 .font(.title3.weight(.medium))
                 .foregroundStyle(.green)
 
-            Text("\(Format.duration(chosen?.coverage ?? 0)) of today is now filed under \(projectName), including the part recorded before you made the rule.")
-                .font(.subheadline)
+            Text("\(Format.duration(chosen?.coverage ?? 0)) of today is now \(projectName) — including the part recorded before you made the rule.")
+                .font(.title3)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("That is the whole idea. You never have to decide in advance what you are working on, only afterwards what it was. Add more rules any time in Settings.")
-                .font(.subheadline)
+            Text("That is the whole idea. Decide afterwards, not in advance.")
+                .font(.title3)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
